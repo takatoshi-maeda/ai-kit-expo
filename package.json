@@ -1,0 +1,23 @@
+{
+  "name": "@takatoshi-maeda/ai-kit-expo",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "tsconfig.json"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client/index.ts",
+    "./runtime": "./src/runtime/index.ts",
+    "./thread": "./src/thread/index.ts",
+    "./document": "./src/document/index.ts",
+    "./ui": "./src/ui/index.ts"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-native": ">=0.81"
+  }
+}
