@@ -21,11 +21,17 @@ export type { AiKitProviderProps, AiKitRuntimeValue } from './runtime';
 
 export { ThreadList, ThreadPane, useComposer, useThread, useThreadMessages } from './thread';
 export type {
-  ComposerState,
+  ComposerImageAttachment,
+  LogEntry,
+  ThreadMessage,
+  ThreadMessageAttachment,
   ThreadListProps,
-  ThreadMessagesState,
   ThreadPaneProps,
   ThreadState,
+  UseComposerOptions,
+  UseComposerResult,
+  UseThreadOptions,
+  UseThreadResult,
 } from './thread';
 
 export { DocumentWorkspace } from './document';

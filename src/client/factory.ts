@@ -1,3 +1,6 @@
+import { runAgent } from './agent';
+import { deleteConversation, getConversation, listConversations } from './conversations';
+import { healthCheck } from './health';
 import type {
   AiKitClient,
   AiKitClientConfig,
@@ -5,8 +8,9 @@ import type {
   AiKitDocumentClientConfig,
   AiKitToolNameConfig,
 } from './types';
+import { getUsageSummary } from './usage';
 
-const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
+export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
   agentRun: 'agent.run',
   conversationList: 'conversations.list',
   conversationGet: 'conversations.get',
@@ -37,6 +41,7 @@ function freezeDocumentConfig(config: AiKitDocumentClientConfig): Readonly<AiKit
 function freezeClientConfig(config: AiKitClientConfig): Readonly<AiKitClientConfig> {
   return Object.freeze({
     ...config,
+    baseUrl: config.baseUrl.replace(/\/+$/, ''),
     toolNames: freezeToolNames(config.toolNames),
     themeTokens: config.themeTokens ? Object.freeze({ ...config.themeTokens }) : undefined,
     clientInfo: config.clientInfo ? Object.freeze({ ...config.clientInfo }) : undefined,
@@ -54,19 +59,38 @@ export function createAiKitDocumentClient(
 
 export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
   const frozenConfig = freezeClientConfig(config);
+  const documents = createAiKitDocumentClient({
+    baseUrl: frozenConfig.baseUrl,
+    authFetch: frozenConfig.authFetch,
+    storage: frozenConfig.storage,
+    themeTokens: frozenConfig.themeTokens,
+    toolNames: frozenConfig.toolNames,
+    headers: frozenConfig.headers,
+  });
 
-  return {
+  const client: AiKitClient = {
     kind: 'ai-kit-client',
     config: frozenConfig,
-    documents: createAiKitDocumentClient({
-      baseUrl: frozenConfig.baseUrl,
-      authFetch: frozenConfig.authFetch,
-      storage: frozenConfig.storage,
-      themeTokens: frozenConfig.themeTokens,
-      toolNames: frozenConfig.toolNames,
-      headers: frozenConfig.headers,
-    }),
+    documents,
+    listConversations(limit, agentName) {
+      return listConversations(client, limit, agentName);
+    },
+    getConversation(sessionId, agentName) {
+      return getConversation(client, sessionId, agentName);
+    },
+    deleteConversation(sessionId, agentName) {
+      return deleteConversation(client, sessionId, agentName);
+    },
+    getUsageSummary(period, agentName) {
+      return getUsageSummary(client, period, agentName);
+    },
+    healthCheck(agentName) {
+      return healthCheck(client, agentName);
+    },
+    runAgent(options) {
+      return runAgent(client, options);
+    },
   };
-}
 
-export { DEFAULT_TOOL_NAMES };
+  return client;
+}
