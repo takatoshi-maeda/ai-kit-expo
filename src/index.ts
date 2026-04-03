@@ -16,8 +16,28 @@ export type {
   AiKitToolNameConfig,
 } from './client';
 
-export { AiKitProvider, useAiKitClient, useAiKitDocumentClient, useAiKitRuntime } from './runtime';
-export type { AiKitProviderProps, AiKitRuntimeValue } from './runtime';
+export {
+  AiKitProvider,
+  useAiKitActiveAgentName,
+  useAiKitClient,
+  useAiKitDocumentClient,
+  useAiKitRuntime,
+  useMcpStatus,
+  useSessions,
+  useUsage,
+} from './runtime';
+export type {
+  AiKitAgentCapabilities,
+  AiKitAgentConfig,
+  AiKitConnectionState,
+  AiKitMcpStatus,
+  AiKitProviderProps,
+  AiKitRuntimeConfig,
+  AiKitRuntimeValue,
+  AiKitStatusFetcher,
+  AiKitUsageLogEntry,
+  AiKitUsageStatus,
+} from './runtime';
 
 export {
   CheckpointPanel,

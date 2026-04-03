@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useAiKitClient } from '../runtime';
+import { useAiKitActiveAgentName, useAiKitClient } from '../runtime';
 import {
   getActiveRun,
   subscribeActiveRun,
@@ -261,6 +261,8 @@ const DEFAULT_POLL_INTERVAL = 2000;
 
 export function useThread(sessionId: string, options: UseThreadOptions = {}): UseThreadResult {
   const client = useAiKitClient();
+  const activeAgentName = useAiKitActiveAgentName();
+  const resolvedAgentName = options.agentName ?? activeAgentName;
   const [state, setState] = useState<ThreadState>({
     logEntries: [],
     agentName: null,
@@ -270,7 +272,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
   });
   const [pollable, setPollable] = useState(false);
   const loadedSessionRef = useRef<string | null>(null);
-  const sessionKey = `${options.agentName ?? ''}:${sessionId}`;
+  const sessionKey = `${resolvedAgentName}:${sessionId}`;
 
   useEffect(() => {
     if (sessionId === 'new' || !sessionId) {
@@ -317,7 +319,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
     void (async () => {
       setState((prev) => ({ ...prev, isLoading: true }));
       try {
-        const session = await client.getConversation(sessionId, options.agentName);
+        const session = await client.getConversation(sessionId, resolvedAgentName);
         if (cancelled) return;
         const decoded = decodeConversationToLogEntries(session as unknown as Record<string, unknown>);
         loadedSessionRef.current = sessionKey;
@@ -345,7 +347,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
     return () => {
       cancelled = true;
     };
-  }, [client, options.agentName, sessionId, sessionKey]);
+  }, [client, resolvedAgentName, sessionId, sessionKey]);
 
   useEffect(() => {
     if (!pollable || !sessionId || sessionId === 'new') return;
@@ -353,7 +355,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
 
     const poll = async () => {
       try {
-        const session = await client.getConversation(sessionId, options.agentName);
+        const session = await client.getConversation(sessionId, resolvedAgentName);
         if (cancelled) return;
         const decoded = decodeConversationToLogEntries(session as unknown as Record<string, unknown>);
         setState((prev) => ({
@@ -376,7 +378,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
       cancelled = true;
       clearInterval(timer);
     };
-  }, [client, options.agentName, options.pollIntervalMs, pollable, sessionId]);
+  }, [client, options.pollIntervalMs, pollable, resolvedAgentName, sessionId]);
 
   const appendEntry = useCallback((entry: LogEntry) => {
     setState((prev) => ({ ...prev, logEntries: [...prev.logEntries, entry] }));

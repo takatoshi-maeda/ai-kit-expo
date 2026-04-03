@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
-import { useAiKitClient } from '../runtime';
+import { useAiKitActiveAgentName, useAiKitClient } from '../runtime';
 import {
   completeActiveRun,
   createActiveRun,
@@ -88,6 +88,8 @@ export function useComposer(
   options: UseComposerOptions = {},
 ): UseComposerResult {
   const client = useAiKitClient();
+  const activeAgentName = useAiKitActiveAgentName();
+  const resolvedAgentName = options.agentName ?? activeAgentName;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -173,7 +175,7 @@ export function useComposer(
           message: hasAttachments ? undefined : textForAgent,
           input: hasAttachments ? input : undefined,
           sessionId: activeSessionId === 'new' ? undefined : activeSessionId,
-          agentName: options.agentName,
+          agentName: resolvedAgentName,
           signal: controller.signal,
           onStreamEvent: (payload) => {
             if (!hasRefreshedList) {
@@ -275,7 +277,7 @@ export function useComposer(
         }, 0);
       }
     },
-    [client, options, thread],
+    [client, options, resolvedAgentName, thread],
   );
 
   const submit = useCallback(
