@@ -8,7 +8,7 @@ import type {
   SaveDocumentFileArgs,
 } from './types';
 
-const DEFAULT_DOCUMENT_BASE_PATH = '/api/codefleet/documents';
+const DEFAULT_DOCUMENT_BASE_PATH = '/api/documents';
 
 function getFetch(client: AiKitDocumentClient): AiKitFetch {
   return client.config.authFetch ?? fetch;
