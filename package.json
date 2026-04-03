@@ -14,7 +14,7 @@
     "./runtime": "./src/runtime/index.ts",
     "./thread": "./src/thread/index.ts",
     "./document": "./src/document/index.ts",
-    "./ui": "./src/ui/index.ts"
+    "./ui": "./src/ui/index.tsx"
   },
   "peerDependencies": {
     "react": ">=19",

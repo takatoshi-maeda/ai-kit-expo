@@ -19,14 +19,32 @@ export type {
 export { AiKitProvider, useAiKitClient, useAiKitDocumentClient, useAiKitRuntime } from './runtime';
 export type { AiKitProviderProps, AiKitRuntimeValue } from './runtime';
 
-export { ThreadList, ThreadPane, useComposer, useThread, useThreadMessages } from './thread';
+export {
+  CheckpointPanel,
+  Composer,
+  ThreadDetail,
+  ThreadList,
+  ThreadMessageView,
+  ThreadPane,
+  useComposer,
+  useThread,
+  useThreadMessages,
+} from './thread';
 export type {
+  CheckpointPanelProps,
+  ComposerProps,
   ComposerImageAttachment,
   LogEntry,
+  ThreadCheckpointCandidate,
+  ThreadDetailProps,
+  ThreadHistoryItem,
+  ThreadListItem,
   ThreadMessage,
   ThreadMessageAttachment,
-  ThreadListProps,
+  ThreadMessageViewProps,
   ThreadPaneProps,
+  ThreadUiColors,
+  ThreadListProps,
   ThreadState,
   UseComposerOptions,
   UseComposerResult,
