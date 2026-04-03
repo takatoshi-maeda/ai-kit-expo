@@ -1,5 +1,12 @@
 import { runAgent } from './agent';
 import { deleteConversation, getConversation, listConversations } from './conversations';
+import {
+  getDocumentAssetUrl,
+  getDocumentFile,
+  listDocumentsTree,
+  saveDocumentFile,
+  watchDocuments,
+} from './documents';
 import { healthCheck } from './health';
 import type {
   AiKitClient,
@@ -33,6 +40,8 @@ function freezeToolNames(overrides: Partial<AiKitToolNameConfig> | undefined): A
 function freezeDocumentConfig(config: AiKitDocumentClientConfig): Readonly<AiKitDocumentClientConfig> {
   return Object.freeze({
     ...config,
+    baseUrl: config.baseUrl.replace(/\/+$/, ''),
+    documentBasePath: config.documentBasePath,
     toolNames: freezeToolNames(config.toolNames),
     themeTokens: config.themeTokens ? Object.freeze({ ...config.themeTokens }) : undefined,
   });
@@ -42,6 +51,7 @@ function freezeClientConfig(config: AiKitClientConfig): Readonly<AiKitClientConf
   return Object.freeze({
     ...config,
     baseUrl: config.baseUrl.replace(/\/+$/, ''),
+    documentBasePath: config.documentBasePath,
     toolNames: freezeToolNames(config.toolNames),
     themeTokens: config.themeTokens ? Object.freeze({ ...config.themeTokens }) : undefined,
     clientInfo: config.clientInfo ? Object.freeze({ ...config.clientInfo }) : undefined,
@@ -51,10 +61,26 @@ function freezeClientConfig(config: AiKitClientConfig): Readonly<AiKitClientConf
 export function createAiKitDocumentClient(
   config: AiKitDocumentClientConfig,
 ): AiKitDocumentClient {
-  return {
+  const client: AiKitDocumentClient = {
     kind: 'ai-kit-document-client',
     config: freezeDocumentConfig(config),
+    listDocumentsTree() {
+      return listDocumentsTree(client);
+    },
+    getDocumentFile(path) {
+      return getDocumentFile(client, path);
+    },
+    saveDocumentFile(args) {
+      return saveDocumentFile(client, args);
+    },
+    watchDocuments(args) {
+      return watchDocuments(client, args);
+    },
+    getDocumentAssetUrl(path) {
+      return getDocumentAssetUrl(client, path);
+    },
   };
+  return client;
 }
 
 export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
@@ -66,6 +92,7 @@ export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
     themeTokens: frozenConfig.themeTokens,
     toolNames: frozenConfig.toolNames,
     headers: frozenConfig.headers,
+    documentBasePath: frozenConfig.documentBasePath,
   });
 
   const client: AiKitClient = {

@@ -76,12 +76,14 @@ export type AiKitInjectedDependencies = {
 
 export type AiKitDocumentClientConfig = AiKitInjectedDependencies & {
   baseUrl: string;
+  documentBasePath?: string;
 };
 
 export type AiKitClientConfig = AiKitInjectedDependencies & {
   baseUrl: string;
   defaultAgentName?: string;
   protocolVersion?: string;
+  documentBasePath?: string;
   clientInfo?: {
     name: string;
     version: string;
@@ -185,6 +187,89 @@ export type AgentInputItem =
   | { type: 'image'; source: { type: 'url'; url: string } }
   | { type: 'image'; source: { type: 'base64'; mediaType: string; data: string } };
 
+export type DocumentActor = {
+  type: 'user' | 'agent' | 'system' | 'external';
+  id: string;
+};
+
+export type DocumentLanguage =
+  | 'markdown'
+  | 'python'
+  | 'text'
+  | 'image'
+  | 'video'
+  | 'pdf'
+  | 'binary';
+
+export type DocumentTreeNode = {
+  id: string;
+  name: string;
+  path: string;
+  kind: 'file' | 'folder';
+  children?: DocumentTreeNode[];
+  language?: DocumentLanguage;
+};
+
+export type DocumentTreeResult = {
+  root: DocumentTreeNode[];
+  updatedAt: string;
+};
+
+export type DocumentFileResult = {
+  path: string;
+  name: string;
+  language: DocumentLanguage;
+  content: string | null;
+  version: string;
+  updatedAt: string;
+  updatedBy?: DocumentActor | null;
+  mimeType: string;
+  isBinary: boolean;
+};
+
+export type SaveDocumentFileArgs = {
+  path: string;
+  content: string;
+  baseVersion?: string | null;
+  actor?: DocumentActor | null;
+};
+
+export type DocumentWatchEvent =
+  | {
+      type: 'document.snapshot';
+      payload: {
+        root: DocumentTreeNode[];
+        updatedAt: string;
+        rootDir: string;
+      };
+    }
+  | {
+      type: 'document.changed';
+      payload: {
+        path: string;
+        version: string;
+        updatedAt: string;
+        updatedBy?: DocumentActor | null;
+        change: { kind: 'created' | 'updated' };
+      };
+    }
+  | {
+      type: 'document.deleted';
+      payload: {
+        path: string;
+        updatedAt: string;
+        change: { kind: 'deleted' };
+      };
+    }
+  | {
+      type: 'document.heartbeat';
+      payload: { timestamp: string };
+    }
+  | {
+      type: 'document.error';
+      payload: { message?: string };
+    };
+
 export type RunAgentOptions = {
   message?: string;
   input?: AgentInputItem[];
@@ -198,6 +283,14 @@ export type RunAgentOptions = {
 export type AiKitDocumentClient = {
   readonly kind: 'ai-kit-document-client';
   readonly config: Readonly<AiKitDocumentClientConfig>;
+  listDocumentsTree(): Promise<DocumentTreeResult>;
+  getDocumentFile(path: string): Promise<DocumentFileResult>;
+  saveDocumentFile(args: SaveDocumentFileArgs): Promise<DocumentFileResult>;
+  watchDocuments(args: {
+    signal?: AbortSignal;
+    onEvent?: (event: DocumentWatchEvent) => void;
+  }): Promise<void>;
+  getDocumentAssetUrl(path: string): string;
 };
 
 export type AiKitClient = {

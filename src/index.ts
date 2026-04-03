@@ -72,8 +72,26 @@ export type {
   UseThreadResult,
 } from './thread';
 
-export { DocumentWorkspace } from './document';
-export type { DocumentWorkspaceProps } from './document';
+export {
+  DocumentEditorPane,
+  DocumentExplorerPane,
+  DocumentFilePreview,
+  DocumentMarkdownPreview,
+  DocumentWorkspace,
+  useDocumentWorkspace,
+} from './document';
+export type {
+  DocumentEditorPaneProps,
+  DocumentEditorViewMode,
+  DocumentExplorerPaneProps,
+  DocumentFilePreviewProps,
+  DocumentMarkdownPreviewProps,
+  DocumentUiColors,
+  DocumentWorkspaceClient,
+  DocumentWorkspaceProps,
+  DocumentWorkspaceState,
+  UseDocumentWorkspaceResult,
+} from './document';
 
 export { McpConnectionOverlay, RunningIndicator } from './ui';
 export type { McpConnectionOverlayProps, RunningIndicatorProps } from './ui';

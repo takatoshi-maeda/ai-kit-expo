@@ -1,5 +1,12 @@
 export { createAiKitClient, createAiKitDocumentClient, DEFAULT_TOOL_NAMES } from './factory';
 export { deleteConversation, getConversation, listConversations } from './conversations';
+export {
+  getDocumentAssetUrl,
+  getDocumentFile,
+  listDocumentsTree,
+  saveDocumentFile,
+  watchDocuments,
+} from './documents';
 export { runAgent } from './agent';
 export { healthCheck } from './health';
 export { getUsageSummary } from './usage';
@@ -18,6 +25,12 @@ export type {
   AiKitStorageAdapter,
   AiKitThemeTokens,
   AiKitToolNameConfig,
+  DocumentActor,
+  DocumentFileResult,
+  DocumentLanguage,
+  DocumentTreeNode,
+  DocumentTreeResult,
+  DocumentWatchEvent,
   ConversationSummary,
   ConversationsDeleteResult,
   ConversationsGetResult,
@@ -28,6 +41,7 @@ export type {
   JsonRpcRequest,
   JsonRpcResponse,
   RunAgentOptions,
+  SaveDocumentFileArgs,
   StreamRequestOptions,
   UsageSummaryResult,
 } from './types';
