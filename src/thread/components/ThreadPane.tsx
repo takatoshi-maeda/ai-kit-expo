@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,6 +10,8 @@ import type { ThreadPaneProps } from './types';
 
 export function ThreadPane({
   title,
+  navigation,
+  headerAccessory,
   messages,
   elapsedSeconds,
   onSubmit,
@@ -34,14 +36,46 @@ export function ThreadPane({
   checkpoint,
 }: ThreadPaneProps): ReactElement {
   const palette = resolveColors(colors);
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+
+  useEffect(() => {
+    if (!navigation) {
+      setIsNavigationOpen(false);
+    }
+  }, [navigation]);
+
+  useEffect(() => {
+    if (isHistoryOpen) {
+      setIsNavigationOpen(false);
+    }
+  }, [isHistoryOpen]);
 
   return (
     <View style={styles.container}>
-      {title ? (
+      {title || navigation ? (
         <View style={[styles.header, { borderBottomColor: palette.sidebarBorder }]}>
-          <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>
-            {title}
-          </Text>
+          {navigation ? (
+            <Pressable
+              style={styles.navigationButton}
+              onPress={() => setIsNavigationOpen((value) => !value)}
+              hitSlop={8}
+            >
+              <View style={styles.navigationLabelWrap}>
+                <Text style={[styles.navigationLabel, { color: palette.text }]} numberOfLines={1}>
+                  {navigation.label}
+                </Text>
+              </View>
+              <Ionicons
+                name={isNavigationOpen ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={palette.icon}
+              />
+            </Pressable>
+          ) : (
+            <Text style={[styles.title, { color: palette.text }]} numberOfLines={1}>
+              {title}
+            </Text>
+          )}
           <View style={styles.headerActions}>
             {showCopyButton && onCopyAll ? (
               <Pressable onPress={() => void onCopyAll()} hitSlop={8}>
@@ -58,8 +92,45 @@ export function ThreadPane({
                 <Ionicons name={isHistoryOpen ? 'time' : 'time-outline'} size={20} color={palette.icon} />
               </Pressable>
             ) : null}
+            {headerAccessory}
           </View>
         </View>
+      ) : null}
+      {navigation && isNavigationOpen ? (
+        <>
+          <Pressable style={styles.navigationDismissLayer} onPress={() => setIsNavigationOpen(false)} />
+          <View
+            style={[
+              styles.navigationPanel,
+              { backgroundColor: palette.sidebarBg, borderColor: palette.sidebarBorder },
+            ]}
+          >
+            <ScrollView style={styles.navigationList} contentContainerStyle={styles.navigationListContent}>
+              {navigation.items.map((item) => (
+                <Pressable
+                  key={item.key}
+                  style={[
+                    styles.navigationItem,
+                    navigation.selectedKey === item.key && { backgroundColor: palette.sidebarSelectedBg },
+                  ]}
+                  onPress={() => {
+                    setIsNavigationOpen(false);
+                    navigation.onSelect(item.key);
+                  }}
+                >
+                  <View style={styles.navigationItemText}>
+                    <Text style={[styles.navigationItemLabel, { color: palette.text }]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </View>
+                  {navigation.selectedKey === item.key ? (
+                    <Ionicons name="checkmark" size={16} color={palette.tint} />
+                  ) : null}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </>
       ) : null}
       {showHistoryButton && isHistoryOpen ? (
         <>
@@ -145,20 +216,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '700',
     flex: 1,
+    marginRight: 8,
+  },
+  navigationButton: {
+    flex: 1,
+    minHeight: 32,
+    maxWidth: 220,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 8,
     marginRight: 12,
+  },
+  navigationLabelWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  navigationLabel: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  navigationPanel: {
+    position: 'absolute',
+    top: 58,
+    left: 16,
+    width: 280,
+    maxHeight: 280,
+    borderWidth: 1,
+    borderRadius: 8,
+    zIndex: 20,
+    overflow: 'hidden',
+  },
+  navigationDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+  navigationList: {
+    maxHeight: 280,
+  },
+  navigationListContent: {
+    paddingVertical: 6,
+  },
+  navigationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 36,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  navigationItemText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  navigationItemLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   historyPanel: {
     position: 'absolute',

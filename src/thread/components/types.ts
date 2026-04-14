@@ -26,6 +26,11 @@ export type ThreadHistoryItem = {
   label: string;
 };
 
+export type ThreadHeaderNavigationItem = {
+  key: string;
+  label: string;
+};
+
 export type ThreadListProps = {
   items: ThreadListItem[];
   isLoading: boolean;
@@ -74,6 +79,13 @@ export type CheckpointPanelProps = {
 
 export type ThreadPaneProps = {
   title?: string;
+  navigation?: {
+    label: string;
+    items: ThreadHeaderNavigationItem[];
+    selectedKey?: string | null;
+    onSelect: (key: string) => void;
+  };
+  headerAccessory?: ReactNode;
   messages: ThreadMessage[];
   elapsedSeconds: number;
   onSubmit: (text: string, attachments: ComposerImageAttachment[]) => void;

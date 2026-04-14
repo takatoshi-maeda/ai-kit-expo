@@ -10,6 +10,7 @@ export type {
   CheckpointPanelProps,
   ComposerProps,
   ThreadCheckpointCandidate,
+  ThreadHeaderNavigationItem,
   ThreadDetailProps,
   ThreadHistoryItem,
   ThreadListItem,
