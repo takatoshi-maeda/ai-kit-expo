@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import type { ThreadPathMentionCandidate } from '@/lib/threadPathMentions';
+
 import type {
   ComposerImageAttachment,
   ThreadMessage,
@@ -65,6 +67,9 @@ export type ComposerProps = {
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
+  pathMentions?: {
+    search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
+  };
 };
 
 export type CheckpointPanelProps = {
@@ -94,6 +99,9 @@ export type ThreadPaneProps = {
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
+  pathMentions?: {
+    search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
+  };
   onCopyMessage?: (text: string) => void | Promise<void>;
   onCopyAll?: () => void | Promise<void>;
   showCopyButton?: boolean;

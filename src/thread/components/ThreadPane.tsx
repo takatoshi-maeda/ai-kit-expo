@@ -20,6 +20,7 @@ export function ThreadPane({
   colors,
   placeholder,
   allowImageAttachments,
+  pathMentions,
   onCopyMessage,
   onCopyAll,
   showCopyButton = true,
@@ -192,6 +193,7 @@ export function ThreadPane({
         colors={palette}
         placeholder={placeholder}
         allowImageAttachments={allowImageAttachments}
+        pathMentions={pathMentions}
       />
       {checkpoint?.visible ? (
         <CheckpointPanel
