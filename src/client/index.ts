@@ -10,6 +10,7 @@ export {
 } from './documents';
 export { runAgent } from './agent';
 export { healthCheck } from './health';
+export { listSkills } from './skills';
 export { getUsageSummary } from './usage';
 export { callTool, callToolStream, ensureInitialized, fetchAgentStatus } from './jsonrpc';
 export type {
@@ -24,6 +25,8 @@ export type {
   AgentRuntimePolicy,
   AgentStreamPayload,
   AgentsListResult,
+  SkillListItem,
+  SkillsListResult,
   AiKitFetch,
   AiKitHeadersResolver,
   AiKitInjectedDependencies,

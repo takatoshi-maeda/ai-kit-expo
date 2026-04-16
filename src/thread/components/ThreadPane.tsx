@@ -23,6 +23,7 @@ export function ThreadPane({
   composerAccessory,
   runtimeControls,
   pathMentions,
+  skillMentions,
   onCopyMessage,
   onOpenArtifactPath,
   onCopyAll,
@@ -200,6 +201,7 @@ export function ThreadPane({
         composerAccessory={composerAccessory}
         runtimeControls={runtimeControls}
         pathMentions={pathMentions}
+        skillMentions={skillMentions}
       />
       {checkpoint?.visible ? (
         <CheckpointPanel

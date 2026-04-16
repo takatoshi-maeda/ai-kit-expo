@@ -448,6 +448,7 @@ export function useComposer(
           ),
         );
         syncReactFromStore();
+        options.onAgentRunError?.(error);
       } finally {
         abortControllerRef.current = null;
         abortRequestedRef.current = false;

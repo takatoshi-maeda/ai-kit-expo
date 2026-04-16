@@ -14,6 +14,7 @@ export { useThread } from './useThread';
 export { useComposer } from './useComposer';
 export { useThreadMessages } from './useThreadMessages';
 export { findActiveThreadPathMention, replaceActiveThreadPathMention } from './pathMentions';
+export { findActiveThreadSkillMention, replaceActiveThreadSkillMention } from './skillMentions';
 export {
   CheckpointPanel,
   Composer,
@@ -58,3 +59,7 @@ export type {
   ThreadPathMentionCandidate,
   ThreadPathMentionSelection,
 } from './pathMentions';
+export type {
+  ActiveThreadSkillMention,
+  ThreadSkillMentionCandidate,
+} from './skillMentions';

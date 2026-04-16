@@ -9,6 +9,7 @@ import {
   watchDocuments,
 } from './documents';
 import { healthCheck } from './health';
+import { listSkills } from './skills';
 import type {
   AiKitClient,
   AiKitClientConfig,
@@ -21,6 +22,7 @@ import { getUsageSummary } from './usage';
 export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
   agentList: 'agent.list',
   agentRun: 'agent.run',
+  skillList: 'skills.list',
   conversationList: 'conversations.list',
   conversationGet: 'conversations.get',
   conversationDelete: 'conversations.delete',
@@ -103,6 +105,9 @@ export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
     documents,
     listAgents(agentName) {
       return listAgents(client, agentName);
+    },
+    listSkills(params, agentName) {
+      return listSkills(client, params, agentName);
     },
     listConversations(limit, agentName) {
       return listConversations(client, limit, agentName);

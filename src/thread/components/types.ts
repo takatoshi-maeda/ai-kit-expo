@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { AgentRuntimeInput, AgentRuntimePolicy } from '../../client';
 import type { ThreadPathMentionCandidate } from '../pathMentions';
+import type { ThreadSkillMentionCandidate } from '../skillMentions';
 
 import type {
   ComposerImageAttachment,
@@ -80,6 +81,9 @@ export type ComposerProps = {
   pathMentions?: {
     search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
   };
+  skillMentions?: {
+    search: (query: string) => Promise<ThreadSkillMentionCandidate[]>;
+  };
 };
 
 export type CheckpointPanelProps = {
@@ -118,6 +122,9 @@ export type ThreadPaneProps = {
   };
   pathMentions?: {
     search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
+  };
+  skillMentions?: {
+    search: (query: string) => Promise<ThreadSkillMentionCandidate[]>;
   };
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;

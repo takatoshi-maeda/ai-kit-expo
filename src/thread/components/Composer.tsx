@@ -23,6 +23,10 @@ import {
   type ThreadPathMentionCandidate,
   type ThreadPathMentionSelection,
 } from '../pathMentions';
+import {
+  findActiveThreadSkillMention,
+  replaceActiveThreadSkillMention,
+} from '../skillMentions';
 import { resolveColors } from './colors';
 import type { ComposerProps } from './types';
 
@@ -149,6 +153,7 @@ export function Composer({
   composerAccessory,
   runtimeControls,
   pathMentions,
+  skillMentions,
 }: ComposerProps): ReactElement {
   const colors = resolveColors(colorOverrides);
   const activeSendIconColor = useMemo(
@@ -176,23 +181,43 @@ export function Composer({
   const mentionViewportHeightRef = useRef(0);
   const mentionScrollOffsetRef = useRef(0);
   isFocusedRef.current = isFocused;
-  const mentionsEnabled = Platform.OS === 'web' && !!pathMentions;
+  const pathMentionsEnabled = Platform.OS === 'web' && !!pathMentions;
+  const skillMentionsEnabled = Platform.OS === 'web' && !!skillMentions;
+  const mentionsEnabled = pathMentionsEnabled || skillMentionsEnabled;
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !isSubmitting;
-  const activeMention = useMemo(
+  const activePathMention = useMemo(
     () => (
-      mentionsEnabled && isFocused
+      pathMentionsEnabled && isFocused
         ? findActiveThreadPathMention(text, selection)
         : null
     ),
-    [isFocused, mentionsEnabled, selection, text],
+    [isFocused, pathMentionsEnabled, selection, text],
   );
-  const activeMentionTokenKey = activeMention
-    ? `${activeMention.start}:${activeMention.end}:${activeMention.token}`
+  const activeSkillMention = useMemo(
+    () => (
+      skillMentionsEnabled && isFocused
+        ? findActiveThreadSkillMention(text, selection)
+        : null
+    ),
+    [isFocused, selection, skillMentionsEnabled, text],
+  );
+  const activeSuggestion = useMemo(
+    () => (
+      activeSkillMention
+        ? { kind: 'skill' as const, mention: activeSkillMention }
+        : activePathMention
+          ? { kind: 'path' as const, mention: activePathMention }
+          : null
+    ),
+    [activePathMention, activeSkillMention],
+  );
+  const activeMentionTokenKey = activeSuggestion
+    ? `${activeSuggestion.kind}:${activeSuggestion.mention.start}:${activeSuggestion.mention.end}:${activeSuggestion.mention.token}`
     : null;
   const isMentionListVisible =
     mentionsEnabled
-    && !!activeMention
+    && !!activeSuggestion
     && activeMentionTokenKey !== dismissedMentionTokenKey
     && (isMentionLoading || mentionItems.length > 0);
   const runtimeSections = useMemo(
@@ -305,8 +330,7 @@ export function Composer({
   useEffect(() => {
     if (
       !mentionsEnabled
-      || !activeMention
-      || !pathMentions
+      || !activeSuggestion
       || activeMentionTokenKey === dismissedMentionTokenKey
     ) {
       mentionSearchSequenceRef.current += 1;
@@ -323,7 +347,18 @@ export function Composer({
     setIsMentionLoading(true);
 
     const timeoutId = setTimeout(() => {
-      void pathMentions.search(activeMention.query)
+      const search =
+        activeSuggestion.kind === 'skill'
+          ? skillMentions?.search
+          : pathMentions?.search;
+      if (!search) {
+        setMentionItems([]);
+        setMentionSelectionIndex(0);
+        setIsMentionLoading(false);
+        return;
+      }
+
+      void search(activeSuggestion.mention.query)
         .then((items) => {
           if (mentionSearchSequenceRef.current !== sequence) {
             return;
@@ -345,7 +380,14 @@ export function Composer({
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [activeMention, activeMentionTokenKey, dismissedMentionTokenKey, mentionsEnabled, pathMentions]);
+  }, [
+    activeMentionTokenKey,
+    activeSuggestion,
+    dismissedMentionTokenKey,
+    mentionsEnabled,
+    pathMentions,
+    skillMentions,
+  ]);
 
   useEffect(() => {
     if (!allowImageAttachments || Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -377,10 +419,13 @@ export function Composer({
   }, [attachments, canSend, onSubmit, text]);
 
   const applyMention = useCallback((item: ThreadPathMentionCandidate) => {
-    if (!activeMention) {
+    if (!activeSuggestion) {
       return;
     }
-    const next = replaceActiveThreadPathMention(text, activeMention, item.value);
+    const next =
+      activeSuggestion.kind === 'skill'
+        ? replaceActiveThreadSkillMention(text, activeSuggestion.mention, item.value)
+        : replaceActiveThreadPathMention(text, activeSuggestion.mention, item.value);
     setText(next.text);
     setSelection(next.selection);
     setControlledSelection(next.selection);
@@ -391,7 +436,7 @@ export function Composer({
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
-  }, [activeMention, text]);
+  }, [activeSuggestion, text]);
 
   const handleSelectionChange = useCallback(
     (event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {

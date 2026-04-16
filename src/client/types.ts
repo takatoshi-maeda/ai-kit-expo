@@ -20,6 +20,7 @@ export type AiKitThemeTokens = {
 export type AiKitToolNameConfig = {
   agentList: string;
   agentRun: string;
+  skillList: string;
   conversationList: string;
   conversationGet: string;
   conversationDelete: string;
@@ -132,6 +133,16 @@ export type AgentListEntry = {
 export type AgentsListResult = {
   defaultAgentId: string | null;
   agents: AgentListEntry[];
+};
+
+export type SkillListItem = {
+  name: string;
+  description?: string | null;
+  mention?: string | null;
+};
+
+export type SkillsListResult = {
+  items: SkillListItem[];
 };
 
 export type ConversationsGetResult = {
@@ -326,6 +337,10 @@ export type AiKitClient = {
   readonly config: Readonly<AiKitClientConfig>;
   readonly documents: AiKitDocumentClient;
   listAgents(agentName?: string): Promise<AgentsListResult>;
+  listSkills(
+    params?: Record<string, unknown>,
+    agentName?: string,
+  ): Promise<SkillsListResult>;
   listConversations(limit?: number, agentName?: string): Promise<ConversationsListResult>;
   getConversation(sessionId: string, agentName?: string): Promise<ConversationsGetResult>;
   deleteConversation(sessionId: string, agentName?: string): Promise<ConversationsDeleteResult>;

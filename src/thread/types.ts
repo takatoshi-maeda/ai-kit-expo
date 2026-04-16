@@ -223,6 +223,7 @@ export type UseComposerOptions = {
   onRefreshSessions?: () => Promise<void> | void;
   onSyncUsageFromLogEntries?: (entries: LogEntry[]) => void;
   onSessionIdChange?: (sessionId: string) => void;
+  onAgentRunError?: (error: unknown) => void;
   onHandleSlashCommand?: (text: string, thread: UseThreadResult) => boolean;
   createSystemMessage?: (message: string) => SystemMessageLogEntry;
 };

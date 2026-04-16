@@ -13,6 +13,8 @@ export type {
   AgentRuntimeInput,
   AgentRuntimePolicy,
   AgentsListResult,
+  SkillListItem,
+  SkillsListResult,
   AiKitFetch,
   AiKitHeadersResolver,
   AiKitInjectedDependencies,
@@ -48,6 +50,8 @@ export {
   CheckpointPanel,
   Composer,
   findActiveThreadPathMention,
+  findActiveThreadSkillMention,
+  replaceActiveThreadSkillMention,
   replaceActiveThreadPathMention,
   ThreadDetail,
   ThreadList,
@@ -59,6 +63,7 @@ export {
 } from './thread';
 export type {
   ActiveThreadPathMention,
+  ActiveThreadSkillMention,
   CheckpointPanelProps,
   ComposerProps,
   ComposerImageAttachment,
@@ -71,6 +76,7 @@ export type {
   ThreadMessageAttachment,
   ThreadPathMentionCandidate,
   ThreadPathMentionSelection,
+  ThreadSkillMentionCandidate,
   ThreadMessageViewProps,
   ThreadPaneProps,
   ThreadUiColors,
