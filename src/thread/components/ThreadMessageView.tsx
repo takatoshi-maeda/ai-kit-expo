@@ -170,7 +170,7 @@ function InlineTimelineItem({
   colors: ReturnType<typeof resolveColors>;
   onCopyMessage?: (text: string) => void | Promise<void>;
 }): ReactElement | null {
-  const [artifactExpanded, setArtifactExpanded] = useState(true);
+  const [artifactExpanded, setArtifactExpanded] = useState(false);
   const [artifactPathHovered, setArtifactPathHovered] = useState(false);
 
   if (item.kind === 'reasoning') {
@@ -234,7 +234,7 @@ function InlineTimelineItem({
       >
         <View style={timelineStyles.artifactCardHeader}>
           <Pressable style={timelineStyles.artifactCardHeaderMain} onPress={() => setArtifactExpanded((value) => !value)}>
-            <Text style={[timelineStyles.artifactAction, { color: colors.timelineLabel }]}>{action}</Text>
+            <Text style={[timelineStyles.artifactAction, { color: colors.timelineArg }]}>{action}</Text>
             <Ionicons
               name={artifactExpanded ? 'chevron-down' : 'chevron-up'}
               size={14}
@@ -243,7 +243,7 @@ function InlineTimelineItem({
           </Pressable>
           {onCopyMessage ? (
             <Pressable onPress={() => void onCopyMessage(item.text)} hitSlop={8}>
-              <Ionicons name="copy-outline" size={15} color={colors.icon} />
+              <Ionicons name="copy-outline" size={13} color={colors.icon} />
             </Pressable>
           ) : null}
         </View>
@@ -279,14 +279,13 @@ function InlineTimelineItem({
                       timelineStyles.artifactTooltip,
                       {
                         backgroundColor: palette.cardBg,
-                        borderColor: palette.cardBorder,
                       },
                     ]}
                   >
                     <Text
                       style={[
                         timelineStyles.artifactTooltipText,
-                        { color: palette.plainText },
+                        { color: palette.metaText },
                       ]}
                     >
                       {item.path}
@@ -300,7 +299,12 @@ function InlineTimelineItem({
               </View>
             </View>
             {item.text.trim() ? (
-              <View style={[timelineStyles.artifactCodeBlock, { backgroundColor: palette.codeBg }]}>
+              <View
+                style={[
+                  timelineStyles.artifactCodeBlock,
+                  { backgroundColor: palette.codeBg, borderColor: palette.cardBorder },
+                ]}
+              >
                 {visibleLines.map((line, index) => {
                   const tone = classifyArtifactLine(line);
                   const textColor =
@@ -337,7 +341,12 @@ function InlineTimelineItem({
                 })}
               </View>
             ) : (
-              <View style={[timelineStyles.artifactCodeBlock, { backgroundColor: palette.codeBg }]}>
+              <View
+                style={[
+                  timelineStyles.artifactCodeBlock,
+                  { backgroundColor: palette.codeBg, borderColor: palette.cardBorder },
+                ]}
+              >
                 <Text style={[timelineStyles.artifactOmitted, { color: palette.metaText }]}>Waiting for content...</Text>
               </View>
             )}
@@ -349,9 +358,37 @@ function InlineTimelineItem({
               { backgroundColor: palette.fileBarBg, borderColor: palette.cardBorder },
             ]}
           >
-            <Text style={[timelineStyles.artifactCollapsedTitle, { color: colors.tint }]} numberOfLines={1}>
-              {title}
-            </Text>
+            <View style={timelineStyles.artifactFileNameWrap}>
+              <Pressable
+                disabled={!item.path}
+                onHoverIn={() => setArtifactPathHovered(true)}
+                onHoverOut={() => setArtifactPathHovered(false)}
+                style={timelineStyles.artifactFileNamePressable}
+              >
+                <Text style={[timelineStyles.artifactCollapsedTitle, { color: colors.tint }]} numberOfLines={1}>
+                  {title}
+                </Text>
+              </Pressable>
+              {item.path && artifactPathHovered ? (
+                <View
+                  style={[
+                    timelineStyles.artifactTooltip,
+                    {
+                      backgroundColor: palette.cardBg,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      timelineStyles.artifactTooltipText,
+                      { color: palette.metaText },
+                    ]}
+                  >
+                    {item.path}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             <View style={timelineStyles.artifactStats}>
               <Text style={[timelineStyles.artifactStatAdd, { color: palette.addText }]}>+{stats.additions}</Text>
               <Text style={[timelineStyles.artifactStatDelete, { color: palette.removeText }]}>-{stats.deletions}</Text>
@@ -668,7 +705,6 @@ const timelineStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   artifactCard: {
-    borderWidth: 1,
     borderRadius: 8,
     marginTop: 6,
     marginRight: 8,
@@ -679,7 +715,8 @@ const timelineStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingTop: 2,
+    paddingBottom: 2,
   },
   artifactCardHeaderMain: {
     flexDirection: 'row',
@@ -687,7 +724,7 @@ const timelineStyles = StyleSheet.create({
     gap: 6,
   },
   artifactAction: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
   },
   artifactFileBar: {
@@ -696,8 +733,11 @@ const timelineStyles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
     position: 'relative',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
@@ -706,14 +746,15 @@ const timelineStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 8,
   },
   artifactCollapsedTitle: {
     flex: 1,
     minWidth: 0,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   artifactFileNameWrap: {
@@ -726,11 +767,8 @@ const timelineStyles = StyleSheet.create({
     maxWidth: '100%',
   },
   artifactFileName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-  },
-  artifactFileNameLink: {
-    textDecorationLine: 'underline',
   },
   artifactStats: {
     flexDirection: 'row',
@@ -746,7 +784,15 @@ const timelineStyles = StyleSheet.create({
     fontWeight: '600',
   },
   artifactCodeBlock: {
-    paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 6,
+    paddingTop: 0,
+    paddingBottom: 6,
+    overflow: 'hidden',
   },
   artifactCodeLine: {
     flexDirection: 'row',
@@ -778,10 +824,9 @@ const timelineStyles = StyleSheet.create({
   },
   artifactTooltip: {
     position: 'absolute',
-    top: '100%',
+    bottom: '100%',
     left: 0,
-    marginTop: 6,
-    borderWidth: 1,
+    marginBottom: 6,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -790,8 +835,8 @@ const timelineStyles = StyleSheet.create({
     elevation: 4,
   },
   artifactTooltipText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 16,
     fontFamily: 'monospace',
   },
   header: {
