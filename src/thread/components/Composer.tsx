@@ -73,6 +73,33 @@ function decodeDataUrl(dataUrl: string): { mediaType: string; dataBase64: string
   return { mediaType: match[1], dataBase64: match[2] };
 }
 
+function parseHexChannel(value: string): number | null {
+  const parsed = Number.parseInt(value, 16);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getContrastingIconColor(backgroundColor: string, fallbackColor: string): string {
+  const normalized = backgroundColor.trim();
+  const hex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
+  const expanded = hex.length === 3
+    ? hex.split('').map((char) => `${char}${char}`).join('')
+    : hex;
+
+  if (expanded.length !== 6) {
+    return fallbackColor;
+  }
+
+  const red = parseHexChannel(expanded.slice(0, 2));
+  const green = parseHexChannel(expanded.slice(2, 4));
+  const blue = parseHexChannel(expanded.slice(4, 6));
+  if (red == null || green == null || blue == null) {
+    return fallbackColor;
+  }
+
+  const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+  return luminance > 0.68 ? '#111111' : '#ffffff';
+}
+
 async function readImageFile(file: File): Promise<ComposerImageAttachment | null> {
   const dataUrl = await new Promise<string | null>((resolve) => {
     const reader = new FileReader();
@@ -104,6 +131,10 @@ export function Composer({
   pathMentions,
 }: ComposerProps): ReactElement {
   const colors = resolveColors(colorOverrides);
+  const activeSendIconColor = useMemo(
+    () => getContrastingIconColor(colors.tint, colors.text),
+    [colors.text, colors.tint],
+  );
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<ComposerImageAttachment[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -563,32 +594,32 @@ export function Composer({
               selection={controlledSelection ?? selection}
               testID="composer-input"
             />
-            {isSubmitting ? (
-              <Pressable style={styles.button} onPress={onAbort}>
-                <Ionicons name="stop-circle" size={28} color="#f87171" />
-              </Pressable>
-            ) : (
-              <Pressable
-                style={[styles.sendButton, { backgroundColor: canSend ? colors.tint : `${colors.icon}33` }]}
-                onPress={handleSubmit}
-                disabled={!canSend}
-              >
-                <Ionicons name="arrow-up" size={20} color={canSend ? '#ffffff' : `${colors.icon}66`} />
-              </Pressable>
-            )}
           </View>
         </View>
-        {allowImageAttachments ? (
-          <View style={styles.bottomRow}>
+        <View style={styles.bottomRow}>
+          {allowImageAttachments ? (
             <Pressable style={styles.button} onPress={handleAttachPress} disabled={isSubmitting || Platform.OS !== 'web'}>
               <Ionicons
                 name="attach"
-                size={22}
+                size={20}
                 color={isSubmitting || Platform.OS !== 'web' ? `${colors.icon}55` : colors.icon}
               />
             </Pressable>
-          </View>
-        ) : null}
+          ) : null}
+          {isSubmitting ? (
+            <Pressable style={styles.button} onPress={onAbort}>
+              <Ionicons name="stop-circle" size={24} color="#f87171" />
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.sendButton, { backgroundColor: canSend ? colors.tint : `${colors.icon}33` }]}
+              onPress={handleSubmit}
+              disabled={!canSend}
+            >
+              <Ionicons name="arrow-up" size={18} color={canSend ? activeSendIconColor : `${colors.icon}66`} />
+            </Pressable>
+          )}
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -596,23 +627,24 @@ export function Composer({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
     borderTopWidth: 1,
     gap: 8,
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
+    minHeight: 56,
   },
   inputArea: {
     position: 'relative',
+    flex: 1,
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   attachmentRow: {
     flexDirection: 'row',
@@ -692,14 +724,14 @@ const styles = StyleSheet.create({
   button: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
   },
   sendButton: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
 });
