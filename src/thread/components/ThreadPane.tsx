@@ -24,6 +24,7 @@ export function ThreadPane({
   runtimeControls,
   pathMentions,
   onCopyMessage,
+  onOpenArtifactPath,
   onCopyAll,
   showCopyButton = true,
   showHistoryButton = false,
@@ -187,6 +188,7 @@ export function ThreadPane({
         elapsedSeconds={elapsedSeconds}
         colors={palette}
         onCopyMessage={onCopyMessage}
+        onOpenArtifactPath={onOpenArtifactPath}
       />
       <Composer
         onSubmit={onSubmit}

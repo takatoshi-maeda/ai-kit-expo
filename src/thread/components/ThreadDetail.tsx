@@ -10,6 +10,7 @@ export function ThreadDetail({
   elapsedSeconds,
   colors,
   onCopyMessage,
+  onOpenArtifactPath,
 }: ThreadDetailProps): ReactElement {
   const listRef = useRef<FlatList<ThreadMessage>>(null);
 
@@ -31,6 +32,7 @@ export function ThreadDetail({
             liveElapsed={elapsedSeconds}
             colors={colors}
             onCopyMessage={onCopyMessage}
+            onOpenArtifactPath={onOpenArtifactPath}
           />
         )}
         contentContainerStyle={styles.content}

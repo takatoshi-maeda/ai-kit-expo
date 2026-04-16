@@ -52,6 +52,7 @@ export type ThreadMessageViewProps = {
   liveElapsed: number;
   colors?: ThreadUiColors;
   onCopyMessage?: (text: string) => void | Promise<void>;
+  onOpenArtifactPath?: (path: string) => void | Promise<void>;
 };
 
 export type ThreadDetailProps = {
@@ -59,6 +60,7 @@ export type ThreadDetailProps = {
   elapsedSeconds: number;
   colors?: ThreadUiColors;
   onCopyMessage?: (text: string) => void | Promise<void>;
+  onOpenArtifactPath?: (path: string) => void | Promise<void>;
 };
 
 export type ComposerProps = {
@@ -118,6 +120,7 @@ export type ThreadPaneProps = {
     search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
   };
   onCopyMessage?: (text: string) => void | Promise<void>;
+  onOpenArtifactPath?: (path: string) => void | Promise<void>;
   onCopyAll?: () => void | Promise<void>;
   showCopyButton?: boolean;
   showHistoryButton?: boolean;

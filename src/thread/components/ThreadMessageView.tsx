@@ -165,10 +165,12 @@ function InlineTimelineItem({
   item,
   colors,
   onCopyMessage,
+  onOpenArtifactPath,
 }: {
   item: AgentTimelineItem;
   colors: ReturnType<typeof resolveColors>;
   onCopyMessage?: (text: string) => void | Promise<void>;
+  onOpenArtifactPath?: (path: string) => void | Promise<void>;
 }): ReactElement | null {
   const [artifactExpanded, setArtifactExpanded] = useState(false);
   const [artifactPathHovered, setArtifactPathHovered] = useState(false);
@@ -258,6 +260,7 @@ function InlineTimelineItem({
               <View style={timelineStyles.artifactFileNameWrap}>
                 <Pressable
                   disabled={!item.path}
+                  onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
                   onHoverIn={() => setArtifactPathHovered(true)}
                   onHoverOut={() => setArtifactPathHovered(false)}
                   style={timelineStyles.artifactFileNamePressable}
@@ -361,6 +364,7 @@ function InlineTimelineItem({
             <View style={timelineStyles.artifactFileNameWrap}>
               <Pressable
                 disabled={!item.path}
+                onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
                 onHoverIn={() => setArtifactPathHovered(true)}
                 onHoverOut={() => setArtifactPathHovered(false)}
                 style={timelineStyles.artifactFileNamePressable}
@@ -416,11 +420,13 @@ function AgentInlineTimeline({
   liveElapsed,
   colors,
   onCopyMessage,
+  onOpenArtifactPath,
 }: {
   entry: AgentResponseLogEntry;
   liveElapsed: number;
   colors: ReturnType<typeof resolveColors>;
   onCopyMessage?: (text: string) => void | Promise<void>;
+  onOpenArtifactPath?: (path: string) => void | Promise<void>;
 }): ReactElement | null {
   const [expanded, setExpanded] = useState(false);
   const timeline = entry.timeline;
@@ -471,7 +477,13 @@ function AgentInlineTimeline({
         </View>
       ) : null}
       {visibleItems.map((item) => (
-        <InlineTimelineItem key={item.id} item={item} colors={colors} onCopyMessage={onCopyMessage} />
+        <InlineTimelineItem
+          key={item.id}
+          item={item}
+          colors={colors}
+          onCopyMessage={onCopyMessage}
+          onOpenArtifactPath={onOpenArtifactPath}
+        />
       ))}
       {!hasTimelineText && entry.responseText?.trim() ? (
         <View style={timelineStyles.responseBlock}>
@@ -497,6 +509,7 @@ export function ThreadMessageView({
   liveElapsed,
   colors: colorOverrides,
   onCopyMessage,
+  onOpenArtifactPath,
 }: ThreadMessageViewProps): ReactElement {
   const colors = resolveColors(colorOverrides);
   const [collapsed, setCollapsed] = useState(false);
@@ -543,6 +556,7 @@ export function ThreadMessageView({
                 liveElapsed={liveElapsed}
                 colors={colors}
                 onCopyMessage={onCopyMessage}
+                onOpenArtifactPath={onOpenArtifactPath}
               />
             ) : Array.isArray(message.contentParts) && message.contentParts.length > 0 ? (
               <View style={styles.imageGroup}>
