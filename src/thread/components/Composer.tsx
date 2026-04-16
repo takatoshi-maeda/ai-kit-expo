@@ -657,7 +657,13 @@ export function Composer({
           <View style={styles.inputRow}>
             <TextInput
               ref={inputRef}
-              style={[styles.input, { color: colors.text }]}
+              style={[
+                styles.input,
+                Platform.OS === 'web'
+                  ? ({ outlineStyle: 'none', boxShadow: 'none' } as unknown as typeof styles.input)
+                  : null,
+                { color: colors.text },
+              ]}
               underlineColorAndroid="transparent"
               value={text}
               onChangeText={setText}
