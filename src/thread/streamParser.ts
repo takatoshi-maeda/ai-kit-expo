@@ -8,6 +8,9 @@ export type AgentStreamEvent =
   | { kind: 'table'; headers: string[]; data: Record<string, unknown>[]; responseId?: string }
   | { kind: 'textDelta'; delta: string }
   | { kind: 'reasoningSummaryDelta'; delta: string }
+  | { kind: 'artifactAdded'; itemId: string; path?: string; contentType: 'artifact' }
+  | { kind: 'artifactDelta'; itemId: string; delta: string }
+  | { kind: 'artifactDone'; itemId: string; path?: string; contentType: 'artifact' }
   | { kind: 'toolCall'; summary: string; description?: string; toolCallId?: string; partId?: string }
   | { kind: 'toolCallFinish'; summary?: string; description?: string; toolCallId?: string; partId?: string }
   | { kind: 'cumulativeCost'; amount: number; currency?: string }
@@ -21,6 +24,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const str = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim().length > 0 ? value : undefined;
+
+function parseArtifactPath(payload: Record<string, unknown>): string | undefined {
+  const item = payload.item;
+  if (!item || typeof item !== 'object') return undefined;
+  return str((item as Record<string, unknown>).path);
+}
 
 function parseTextResultPayload(payload: Record<string, unknown>, responseId?: string) {
   const summary = str(payload.summary);
@@ -105,6 +114,38 @@ export function parseAgentStreamLine(line: string): AgentStreamEvent | undefined
     return typeof payload.delta === 'string'
       ? { kind: 'reasoningSummaryDelta', delta: payload.delta }
       : undefined;
+  }
+
+  if (type === 'agent.output_item.added') {
+    const itemId = str(payload.itemId ?? payload.item_id);
+    if (!itemId) return undefined;
+    return {
+      kind: 'artifactAdded',
+      itemId,
+      path: parseArtifactPath(payload),
+      contentType: 'artifact',
+    };
+  }
+
+  if (type === 'agent.artifact_delta') {
+    const itemId = str(payload.itemId ?? payload.item_id);
+    if (!itemId || typeof payload.delta !== 'string') return undefined;
+    return {
+      kind: 'artifactDelta',
+      itemId,
+      delta: payload.delta,
+    };
+  }
+
+  if (type === 'agent.output_item.done') {
+    const itemId = str(payload.itemId ?? payload.item_id);
+    if (!itemId) return undefined;
+    return {
+      kind: 'artifactDone',
+      itemId,
+      path: parseArtifactPath(payload),
+      contentType: 'artifact',
+    };
   }
 
   if (type === 'agent.tool_call') {

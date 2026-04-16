@@ -60,6 +60,14 @@ export type AgentTimelineItem =
     }
   | {
       id: string;
+      kind: 'artifact';
+      text: string;
+      path?: string;
+      contentType: 'artifact';
+      status: 'running' | 'completed';
+    }
+  | {
+      id: string;
       kind: 'cumulative-cost';
       amountLabel: string;
     };

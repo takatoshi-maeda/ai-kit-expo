@@ -8,6 +8,8 @@ import { formatDuration, formatShortTimestamp } from './format';
 import type { ThreadMessageViewProps } from './types';
 
 const INITIAL_VISIBLE_TIMELINE = 3;
+const ARTIFACT_PREVIEW_HEAD_LINES = 8;
+const ARTIFACT_PREVIEW_TAIL_LINES = 4;
 
 function jsonArgsToYaml(lines: string[]): string[] {
   const joined = lines.join('');
@@ -36,6 +38,96 @@ function jsonArgsToYaml(lines: string[]): string[] {
     result.push(line);
   }
   return result;
+}
+
+function fileNameFromPath(path?: string): string | null {
+  if (!path) return null;
+  const segments = path.replace(/\\/g, '/').split('/');
+  return segments.at(-1) ?? null;
+}
+
+function buildArtifactPreview(text: string): { lines: string[]; omittedLineCount: number } {
+  const lines = text.split('\n');
+  const maxVisible = ARTIFACT_PREVIEW_HEAD_LINES + ARTIFACT_PREVIEW_TAIL_LINES;
+  if (lines.length <= maxVisible) {
+    return { lines, omittedLineCount: 0 };
+  }
+
+  return {
+    lines: [
+      ...lines.slice(0, ARTIFACT_PREVIEW_HEAD_LINES),
+      `... (${lines.length - maxVisible} more lines)`,
+      ...lines.slice(-ARTIFACT_PREVIEW_TAIL_LINES),
+    ],
+    omittedLineCount: lines.length - maxVisible,
+  };
+}
+
+function classifyArtifactAction(item: Extract<AgentTimelineItem, { kind: 'artifact' }>): string {
+  if (item.text.includes('*** Add File:')) return 'Created file';
+  if (item.text.includes('*** Update File:')) return 'Updated file';
+  if (item.text.includes('*** Delete File:')) return 'Deleted file';
+  return item.status === 'running' ? 'Editing file' : 'Edited file';
+}
+
+function countDiffStats(text: string): { additions: number; deletions: number } {
+  let additions = 0;
+  let deletions = 0;
+
+  for (const line of text.split('\n')) {
+    if (line.startsWith('+++') || line.startsWith('---')) continue;
+    if (line.startsWith('+')) additions += 1;
+    if (line.startsWith('-')) deletions += 1;
+  }
+
+  return { additions, deletions };
+}
+
+function classifyArtifactLine(line: string): 'add' | 'remove' | 'meta' | 'plain' {
+  if (
+    line.startsWith('*** ') ||
+    line.startsWith('@@') ||
+    line.startsWith('diff ') ||
+    line.startsWith('index ') ||
+    line.startsWith('+++') ||
+    line.startsWith('---')
+  ) {
+    return 'meta';
+  }
+  if (line.startsWith('+')) return 'add';
+  if (line.startsWith('-')) return 'remove';
+  return 'plain';
+}
+
+function getArtifactPalette(colors: ReturnType<typeof resolveColors>) {
+  const dark = colors.background.toLowerCase() === '#151718';
+  return dark
+    ? {
+        cardBg: '#1e1f20',
+        cardBorder: '#2a2d2f',
+        fileBarBg: '#222426',
+        codeBg: '#141816',
+        lineNumber: '#7f858a',
+        plainText: '#d1d5db',
+        metaText: '#9ca3af',
+        addText: '#86efac',
+        removeText: '#fca5a5',
+        addBg: '#0f2a1d',
+        removeBg: '#3a1616',
+      }
+    : {
+        cardBg: '#ffffff',
+        cardBorder: '#d1d5db',
+        fileBarBg: '#f3f4f6',
+        codeBg: '#f6fbf7',
+        lineNumber: '#9ca3af',
+        plainText: '#374151',
+        metaText: '#6b7280',
+        addText: '#166534',
+        removeText: '#991b1b',
+        addBg: '#dcfce7',
+        removeBg: '#fee2e2',
+      };
 }
 
 function TimelineDot({
@@ -72,10 +164,15 @@ function TimelineDot({
 function InlineTimelineItem({
   item,
   colors,
+  onCopyMessage,
 }: {
   item: AgentTimelineItem;
   colors: ReturnType<typeof resolveColors>;
+  onCopyMessage?: (text: string) => void | Promise<void>;
 }): ReactElement | null {
+  const [artifactExpanded, setArtifactExpanded] = useState(true);
+  const [artifactPathHovered, setArtifactPathHovered] = useState(false);
+
   if (item.kind === 'reasoning') {
     return (
       <View style={timelineStyles.item}>
@@ -117,6 +214,154 @@ function InlineTimelineItem({
 
   if (item.kind === 'cumulative-cost') return null;
 
+  if (item.kind === 'artifact') {
+    const preview = buildArtifactPreview(item.text);
+    const visibleLines =
+      artifactExpanded || preview.omittedLineCount === 0
+        ? item.text.split('\n')
+        : preview.lines;
+    const title = fileNameFromPath(item.path) ?? item.id;
+    const action = classifyArtifactAction(item);
+    const stats = countDiffStats(item.text);
+    const palette = getArtifactPalette(colors);
+
+    return (
+      <View
+        style={[
+          timelineStyles.artifactCard,
+          { backgroundColor: palette.cardBg, borderColor: palette.cardBorder },
+        ]}
+      >
+        <View style={timelineStyles.artifactCardHeader}>
+          <Pressable style={timelineStyles.artifactCardHeaderMain} onPress={() => setArtifactExpanded((value) => !value)}>
+            <Text style={[timelineStyles.artifactAction, { color: colors.timelineLabel }]}>{action}</Text>
+            <Ionicons
+              name={artifactExpanded ? 'chevron-down' : 'chevron-up'}
+              size={14}
+              color={colors.icon}
+            />
+          </Pressable>
+          {onCopyMessage ? (
+            <Pressable onPress={() => void onCopyMessage(item.text)} hitSlop={8}>
+              <Ionicons name="copy-outline" size={15} color={colors.icon} />
+            </Pressable>
+          ) : null}
+        </View>
+        {artifactExpanded ? (
+          <>
+            <View
+              style={[
+                timelineStyles.artifactFileBar,
+                { backgroundColor: palette.fileBarBg, borderColor: palette.cardBorder },
+              ]}
+            >
+              <View style={timelineStyles.artifactFileNameWrap}>
+                <Pressable
+                  disabled={!item.path}
+                  onHoverIn={() => setArtifactPathHovered(true)}
+                  onHoverOut={() => setArtifactPathHovered(false)}
+                  style={timelineStyles.artifactFileNamePressable}
+                >
+                  <Text
+                    style={[
+                      timelineStyles.artifactFileName,
+                      timelineStyles.artifactFileNameLink,
+                      { color: colors.tint },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {title}
+                  </Text>
+                </Pressable>
+                {item.path && artifactPathHovered ? (
+                  <View
+                    style={[
+                      timelineStyles.artifactTooltip,
+                      {
+                        backgroundColor: palette.cardBg,
+                        borderColor: palette.cardBorder,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        timelineStyles.artifactTooltipText,
+                        { color: palette.plainText },
+                      ]}
+                    >
+                      {item.path}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={timelineStyles.artifactStats}>
+                <Text style={[timelineStyles.artifactStatAdd, { color: palette.addText }]}>+{stats.additions}</Text>
+                <Text style={[timelineStyles.artifactStatDelete, { color: palette.removeText }]}>-{stats.deletions}</Text>
+              </View>
+            </View>
+            {item.text.trim() ? (
+              <View style={[timelineStyles.artifactCodeBlock, { backgroundColor: palette.codeBg }]}>
+                {visibleLines.map((line, index) => {
+                  const tone = classifyArtifactLine(line);
+                  const textColor =
+                    tone === 'add'
+                      ? palette.addText
+                      : tone === 'remove'
+                        ? palette.removeText
+                        : tone === 'meta'
+                          ? palette.metaText
+                          : palette.plainText;
+                  const backgroundColor =
+                    tone === 'add'
+                      ? palette.addBg
+                      : tone === 'remove'
+                        ? palette.removeBg
+                        : 'transparent';
+
+                  return (
+                    <View
+                      key={`${item.id}-${index}`}
+                      style={[
+                        timelineStyles.artifactCodeLine,
+                        backgroundColor !== 'transparent' && { backgroundColor },
+                      ]}
+                    >
+                      <Text style={[timelineStyles.artifactLineNumber, { color: palette.lineNumber }]}>
+                        {index + 1}
+                      </Text>
+                      <Text style={[timelineStyles.artifactLineText, { color: textColor }]} numberOfLines={1}>
+                        {line || ' '}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={[timelineStyles.artifactCodeBlock, { backgroundColor: palette.codeBg }]}>
+                <Text style={[timelineStyles.artifactOmitted, { color: palette.metaText }]}>Waiting for content...</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <View
+            style={[
+              timelineStyles.artifactCollapsedBar,
+              { backgroundColor: palette.fileBarBg, borderColor: palette.cardBorder },
+            ]}
+          >
+            <Text style={[timelineStyles.artifactCollapsedTitle, { color: colors.tint }]} numberOfLines={1}>
+              {title}
+            </Text>
+            <View style={timelineStyles.artifactStats}>
+              <Text style={[timelineStyles.artifactStatAdd, { color: palette.addText }]}>+{stats.additions}</Text>
+              <Text style={[timelineStyles.artifactStatDelete, { color: palette.removeText }]}>-{stats.deletions}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
+
   if (item.kind === 'text' && item.text.trim()) {
     return (
       <View style={timelineStyles.responseBlock}>
@@ -133,10 +378,12 @@ function AgentInlineTimeline({
   entry,
   liveElapsed,
   colors,
+  onCopyMessage,
 }: {
   entry: AgentResponseLogEntry;
   liveElapsed: number;
   colors: ReturnType<typeof resolveColors>;
+  onCopyMessage?: (text: string) => void | Promise<void>;
 }): ReactElement | null {
   const [expanded, setExpanded] = useState(false);
   const timeline = entry.timeline;
@@ -145,9 +392,10 @@ function AgentInlineTimeline({
   if (timeline.length === 0 && !isRunning) return null;
 
   const hasThinkingOrTool = timeline.some((item) => item.kind === 'reasoning' || item.kind === 'tool-call');
+  const hasArtifact = timeline.some((item) => item.kind === 'artifact');
   const hasTimelineText = timeline.some((item) => item.kind === 'text' && item.text.trim().length > 0);
   const hasResponseText = Boolean(entry.responseText?.trim());
-  const showSyntheticThinking = isRunning && !hasThinkingOrTool && !hasResponseText;
+  const showSyntheticThinking = isRunning && !hasThinkingOrTool && !hasArtifact && !hasResponseText;
   const hiddenCount = expanded ? 0 : Math.max(0, timeline.length - INITIAL_VISIBLE_TIMELINE);
   const visibleItems = expanded ? timeline : timeline.slice(hiddenCount);
   const elapsed = isRunning ? liveElapsed : entry.elapsedSeconds;
@@ -186,7 +434,7 @@ function AgentInlineTimeline({
         </View>
       ) : null}
       {visibleItems.map((item) => (
-        <InlineTimelineItem key={item.id} item={item} colors={colors} />
+        <InlineTimelineItem key={item.id} item={item} colors={colors} onCopyMessage={onCopyMessage} />
       ))}
       {!hasTimelineText && entry.responseText?.trim() ? (
         <View style={timelineStyles.responseBlock}>
@@ -253,7 +501,12 @@ export function ThreadMessageView({
         {!collapsed ? (
           <View style={styles.messageBody}>
             {hasTimeline ? (
-              <AgentInlineTimeline entry={agentEntry} liveElapsed={liveElapsed} colors={colors} />
+              <AgentInlineTimeline
+                entry={agentEntry}
+                liveElapsed={liveElapsed}
+                colors={colors}
+                onCopyMessage={onCopyMessage}
+              />
             ) : Array.isArray(message.contentParts) && message.contentParts.length > 0 ? (
               <View style={styles.imageGroup}>
                 {message.contentParts.map((part, index) =>
@@ -413,6 +666,133 @@ const timelineStyles = StyleSheet.create({
   item: {
     gap: 2,
     paddingVertical: 2,
+  },
+  artifactCard: {
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 6,
+    marginRight: 8,
+    marginBottom: 6,
+  },
+  artifactCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  artifactCardHeaderMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  artifactAction: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  artifactFileBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    position: 'relative',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  artifactCollapsedBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  artifactCollapsedTitle: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  artifactFileNameWrap: {
+    flex: 1,
+    minWidth: 0,
+    position: 'relative',
+  },
+  artifactFileNamePressable: {
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  artifactFileName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  artifactFileNameLink: {
+    textDecorationLine: 'underline',
+  },
+  artifactStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  artifactStatAdd: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  artifactStatDelete: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  artifactCodeBlock: {
+    paddingVertical: 6,
+  },
+  artifactCodeLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 1,
+  },
+  artifactLineNumber: {
+    width: 24,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'right',
+    marginRight: 10,
+    fontFamily: 'monospace',
+  },
+  artifactLineText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'monospace',
+  },
+  artifactOmitted: {
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    fontFamily: 'monospace',
+  },
+  artifactTooltip: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 6,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    maxWidth: 320,
+    zIndex: 10,
+    elevation: 4,
+  },
+  artifactTooltipText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'monospace',
   },
   header: {
     flexDirection: 'row',

@@ -127,6 +127,15 @@ function decodeTimelineItems(raw: unknown): AgentTimelineItem[] {
         previousCompletedAt: decodeNumber(record.previousCompletedAt),
         durationSeconds: decodeNumber(record.durationSeconds),
       });
+    } else if (record.kind === 'artifact') {
+      items.push({
+        id,
+        kind: 'artifact',
+        text: decodeString(record.text) ?? '',
+        path: decodeString(record.path),
+        contentType: 'artifact',
+        status: record.status === 'running' ? 'running' : 'completed',
+      });
     } else if (record.kind === 'cumulative-cost') {
       items.push({ id, kind: 'cumulative-cost', amountLabel: decodeString(record.amountLabel) ?? '' });
     }

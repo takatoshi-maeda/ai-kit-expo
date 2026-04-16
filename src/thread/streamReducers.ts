@@ -68,6 +68,14 @@ function findText(timeline: AgentTimelineItem[], id: string) {
   return { item, index };
 }
 
+function findArtifact(timeline: AgentTimelineItem[], id: string) {
+  const index = findIndex(timeline, 'artifact', id);
+  if (index < 0) return undefined;
+  const item = timeline[index];
+  if (item.kind !== 'artifact') return undefined;
+  return { item, index };
+}
+
 function findLatestRunningToolCallIndex(timeline: AgentTimelineItem[]): number {
   for (let i = timeline.length - 1; i >= 0; i -= 1) {
     const item = timeline[i];
@@ -233,6 +241,72 @@ export function dispatchStreamEvent(
     const newId = createUniqueId(`${ctx.agentEntryId}-reasoning`);
     timeline.push({ id: newId, kind: 'reasoning', status: 'running', text: event.delta });
     ctx.reasoning.activeTimelineId = newId;
+    return { entry: { ...entry, timeline } };
+  }
+
+  if (event.kind === 'artifactAdded') {
+    const timeline = [...entry.timeline];
+    const found = findArtifact(timeline, event.itemId);
+    const nextItem: AgentTimelineItem = {
+      id: event.itemId,
+      kind: 'artifact',
+      text: found?.item.text ?? '',
+      path: event.path ?? found?.item.path,
+      contentType: event.contentType,
+      status: 'running',
+    };
+
+    if (found) {
+      timeline[found.index] = nextItem;
+      moveToEnd(timeline, found.index);
+    } else {
+      timeline.push(nextItem);
+    }
+
+    return { entry: { ...entry, timeline } };
+  }
+
+  if (event.kind === 'artifactDelta') {
+    const timeline = [...entry.timeline];
+    const found = findArtifact(timeline, event.itemId);
+    const nextItem: AgentTimelineItem = {
+      id: event.itemId,
+      kind: 'artifact',
+      text: `${found?.item.text ?? ''}${event.delta}`,
+      path: found?.item.path,
+      contentType: 'artifact',
+      status: 'running',
+    };
+
+    if (found) {
+      timeline[found.index] = nextItem;
+      moveToEnd(timeline, found.index);
+    } else {
+      timeline.push(nextItem);
+    }
+
+    return { entry: { ...entry, timeline } };
+  }
+
+  if (event.kind === 'artifactDone') {
+    const timeline = [...entry.timeline];
+    const found = findArtifact(timeline, event.itemId);
+    const nextItem: AgentTimelineItem = {
+      id: event.itemId,
+      kind: 'artifact',
+      text: found?.item.text ?? '',
+      path: event.path ?? found?.item.path,
+      contentType: event.contentType,
+      status: 'completed',
+    };
+
+    if (found) {
+      timeline[found.index] = nextItem;
+      moveToEnd(timeline, found.index);
+    } else {
+      timeline.push(nextItem);
+    }
+
     return { entry: { ...entry, timeline } };
   }
 
