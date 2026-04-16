@@ -140,10 +140,6 @@ function validateRuntime(runtime: AgentRuntimeInput | null, policy: AgentRuntime
   return null;
 }
 
-function resolveDefaultRuntimePolicy(policy: AgentRuntimePolicy | null): AgentRuntimeInput | null {
-  return cloneRuntime(policy?.defaults);
-}
-
 function selectRuntimePolicy(args: {
   agents: Array<{
     agentId: string;
@@ -256,15 +252,6 @@ export function useComposer(
       setRuntimeError(null);
     }
   }, [options.runtime?.initialValue, resolvedAgentName, runtimeEnabled, sessionId, thread.lastRuntime]);
-
-  useEffect(() => {
-    if (!runtimeEnabled) return;
-    if (thread.lastRuntime) return;
-    if (runtime) return;
-    const defaults = resolveDefaultRuntimePolicy(runtimePolicy);
-    if (!defaults) return;
-    setRuntimeState(defaults);
-  }, [runtime, runtimeEnabled, runtimePolicy, thread.lastRuntime]);
 
   useEffect(() => {
     if (!runtimeEnabled) {

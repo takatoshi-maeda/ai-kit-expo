@@ -115,6 +115,11 @@ function getRuntimeLabel(key: string): string {
   return key;
 }
 
+function getRuntimeDefaultOptionLabel(defaultValue: string | null): string {
+  if (!defaultValue) return 'Default';
+  return `Default (${defaultValue})`;
+}
+
 function getRuntimeIconName(key: string): keyof typeof Ionicons.glyphMap {
   if (key === 'model') return 'cube-outline';
   if (key === 'reasoningEffort') return 'flash-outline';
@@ -249,10 +254,7 @@ export function Composer({
         .filter((section) => section.values.length > 0)
         .map((section) => ({
           ...section,
-          isModified:
-            section.selected !== null
-            && section.defaultValue !== null
-            && section.selected !== section.defaultValue,
+          isModified: section.selected !== null,
         }));
     },
     [runtimeControls],
@@ -813,6 +815,26 @@ export function Composer({
                               {getRuntimeLabel(section.key)}
                             </Text>
                           </View>
+                          <Pressable
+                            style={styles.runtimeDropdownItem}
+                            onPress={() => {
+                              runtimeControls?.onChange({ [section.key]: undefined });
+                              setOpenRuntimeMenuKey(null);
+                            }}
+                          >
+                            <Text
+                              numberOfLines={1}
+                              style={[
+                                styles.runtimeDropdownItemText,
+                                { color: section.selected == null ? colors.tint : colors.text },
+                              ]}
+                            >
+                              {getRuntimeDefaultOptionLabel(section.defaultValue)}
+                            </Text>
+                            {section.selected == null ? (
+                              <Ionicons name="checkmark" size={14} color={colors.tint} />
+                            ) : null}
+                          </Pressable>
                           {section.values.map((value) => {
                             const isSelected = section.selected === value;
                             return (
