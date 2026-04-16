@@ -13,7 +13,7 @@ export function collectInitiallyCollapsedFolderIds(
     if (node.kind !== 'folder') {
       continue;
     }
-    if (depth >= 2) {
+    if (depth >= 1) {
       collapsed.add(node.id);
     }
     if (node.children) {
