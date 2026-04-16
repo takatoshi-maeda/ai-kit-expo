@@ -1,3 +1,4 @@
+import type { AgentRuntimeInput } from '../client';
 import type { ThreadPathMentionCandidate, ThreadPathMentionSelection } from './pathMentions';
 
 export type ActiveThreadSkillMention = {
@@ -65,4 +66,6 @@ export function replaceActiveThreadSkillMention(
   };
 }
 
-export type ThreadSkillMentionCandidate = ThreadPathMentionCandidate;
+export type ThreadSkillMentionCandidate = ThreadPathMentionCandidate & {
+  agentRuntime?: AgentRuntimeInput | null;
+};

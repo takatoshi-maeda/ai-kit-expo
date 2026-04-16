@@ -139,6 +139,13 @@ export type SkillListItem = {
   name: string;
   description?: string | null;
   mention?: string | null;
+  agentRuntime?: AgentRuntimeInput | null;
+  agent_runtime?: {
+    model?: string | null;
+    reasoningEffort?: string | null;
+    reasoning_effort?: string | null;
+    verbosity?: string | null;
+  } | null;
 };
 
 export type SkillsListResult = {

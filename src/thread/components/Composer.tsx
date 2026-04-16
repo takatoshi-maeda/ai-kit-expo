@@ -26,6 +26,7 @@ import {
 import {
   findActiveThreadSkillMention,
   replaceActiveThreadSkillMention,
+  type ThreadSkillMentionCandidate,
 } from '../skillMentions';
 import { resolveColors } from './colors';
 import type { ComposerProps } from './types';
@@ -170,7 +171,7 @@ export function Composer({
   const [isFocused, setIsFocused] = useState(false);
   const [selection, setSelection] = useState<ThreadPathMentionSelection>({ start: 0, end: 0 });
   const [controlledSelection, setControlledSelection] = useState<ThreadPathMentionSelection | undefined>(undefined);
-  const [mentionItems, setMentionItems] = useState<ThreadPathMentionCandidate[]>([]);
+  const [mentionItems, setMentionItems] = useState<Array<ThreadPathMentionCandidate | ThreadSkillMentionCandidate>>([]);
   const [mentionSelectionIndex, setMentionSelectionIndex] = useState(0);
   const [isMentionLoading, setIsMentionLoading] = useState(false);
   const [dismissedMentionTokenKey, setDismissedMentionTokenKey] = useState<string | null>(null);
@@ -420,9 +421,12 @@ export function Composer({
     onSubmit(message, pendingAttachments);
   }, [attachments, canSend, onSubmit, text]);
 
-  const applyMention = useCallback((item: ThreadPathMentionCandidate) => {
+  const applyMention = useCallback((item: ThreadPathMentionCandidate | ThreadSkillMentionCandidate) => {
     if (!activeSuggestion) {
       return;
+    }
+    if (activeSuggestion.kind === 'skill' && item.agentRuntime) {
+      runtimeControls?.onChange(item.agentRuntime);
     }
     const next =
       activeSuggestion.kind === 'skill'
