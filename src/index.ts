@@ -2,12 +2,17 @@ export {
   createAiKitClient,
   createAiKitDocumentClient,
   DEFAULT_TOOL_NAMES,
+  listAgents,
 } from './client';
 export type {
   AiKitClient,
   AiKitClientConfig,
   AiKitDocumentClient,
   AiKitDocumentClientConfig,
+  AgentListEntry,
+  AgentRuntimeInput,
+  AgentRuntimePolicy,
+  AgentsListResult,
   AiKitFetch,
   AiKitHeadersResolver,
   AiKitInjectedDependencies,

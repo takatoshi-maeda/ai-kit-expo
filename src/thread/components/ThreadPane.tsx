@@ -20,6 +20,8 @@ export function ThreadPane({
   colors,
   placeholder,
   allowImageAttachments,
+  composerAccessory,
+  runtimeControls,
   pathMentions,
   onCopyMessage,
   onCopyAll,
@@ -193,6 +195,8 @@ export function ThreadPane({
         colors={palette}
         placeholder={placeholder}
         allowImageAttachments={allowImageAttachments}
+        composerAccessory={composerAccessory}
+        runtimeControls={runtimeControls}
         pathMentions={pathMentions}
       />
       {checkpoint?.visible ? (

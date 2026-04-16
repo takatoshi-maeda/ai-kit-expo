@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import type { AgentRuntimeInput, AgentRuntimePolicy } from '../../client';
 import type { ThreadPathMentionCandidate } from '../pathMentions';
 
 import type {
@@ -67,6 +68,13 @@ export type ComposerProps = {
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
+  composerAccessory?: ReactNode;
+  runtimeControls?: {
+    value: AgentRuntimeInput | null;
+    policy: AgentRuntimePolicy | null;
+    error?: string | null;
+    onChange: (patch: Partial<AgentRuntimeInput>) => void;
+  };
   pathMentions?: {
     search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
   };
@@ -99,6 +107,13 @@ export type ThreadPaneProps = {
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
+  composerAccessory?: ReactNode;
+  runtimeControls?: {
+    value: AgentRuntimeInput | null;
+    policy: AgentRuntimePolicy | null;
+    error?: string | null;
+    onChange: (patch: Partial<AgentRuntimeInput>) => void;
+  };
   pathMentions?: {
     search: (query: string) => Promise<ThreadPathMentionCandidate[]>;
   };

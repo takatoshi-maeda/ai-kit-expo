@@ -1,3 +1,5 @@
+import type { AgentRuntimeInput, AgentRuntimePolicy } from '../client';
+
 export type UserInputPart =
   | { type: 'text'; text: string }
   | { type: 'image'; url: string };
@@ -175,6 +177,7 @@ export type ThreadState = {
   agentName: string | null;
   isRunning: boolean;
   runStartedAt: number | null;
+  lastRuntime: AgentRuntimeInput | null;
   isLoading: boolean;
 };
 
@@ -204,6 +207,11 @@ export type UseThreadOptions = {
 
 export type UseComposerOptions = {
   agentName?: string;
+  resolveParams?: () => Record<string, unknown> | undefined;
+  runtime?: {
+    enabled?: boolean;
+    initialValue?: AgentRuntimeInput | null;
+  };
   onRefreshSessions?: () => Promise<void> | void;
   onSyncUsageFromLogEntries?: (entries: LogEntry[]) => void;
   onSessionIdChange?: (sessionId: string) => void;
@@ -216,4 +224,13 @@ export type UseComposerResult = {
   abort: () => void;
   isSubmitting: boolean;
   commandHistory: string[];
+  runtime: AgentRuntimeInput | null;
+  setRuntime: (
+    next:
+      | AgentRuntimeInput
+      | null
+      | ((prev: AgentRuntimeInput | null) => AgentRuntimeInput | null),
+  ) => void;
+  runtimePolicy: AgentRuntimePolicy | null;
+  runtimeError: string | null;
 };

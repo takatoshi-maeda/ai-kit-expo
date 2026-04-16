@@ -18,6 +18,7 @@ export type AiKitThemeTokens = {
 };
 
 export type AiKitToolNameConfig = {
+  agentList: string;
   agentRun: string;
   conversationList: string;
   conversationGet: string;
@@ -108,12 +109,38 @@ export type ConversationsListResult = {
 
 export type AgentTimelineItem = unknown;
 
+export type AgentRuntimeInput = {
+  model?: string;
+  reasoningEffort?: string;
+  verbosity?: string;
+};
+
+export type AgentRuntimePolicy = {
+  provider?: string;
+  defaults?: AgentRuntimeInput;
+  allowedModels?: string[];
+  allowedReasoningEfforts?: string[];
+  allowedVerbosity?: string[];
+};
+
+export type AgentListEntry = {
+  agentId: string;
+  description?: string | null;
+  runtimePolicy?: AgentRuntimePolicy | null;
+};
+
+export type AgentsListResult = {
+  defaultAgentId: string | null;
+  agents: AgentListEntry[];
+};
+
 export type ConversationsGetResult = {
   sessionId: string;
   title?: string | null;
   createdAt: string;
   updatedAt: string;
   agentName?: string | null;
+  lastRuntime?: AgentRuntimeInput | null;
   status?: 'idle' | 'progress';
   inProgress?: {
     runId?: string | null;
@@ -275,6 +302,7 @@ export type RunAgentOptions = {
   input?: AgentInputItem[];
   sessionId?: string | null;
   agentName?: string | null;
+  runtime?: AgentRuntimeInput;
   params?: Record<string, unknown>;
   signal?: AbortSignal;
   onStreamEvent?: (payload: AgentStreamPayload) => void;
@@ -297,6 +325,7 @@ export type AiKitClient = {
   readonly kind: 'ai-kit-client';
   readonly config: Readonly<AiKitClientConfig>;
   readonly documents: AiKitDocumentClient;
+  listAgents(agentName?: string): Promise<AgentsListResult>;
   listConversations(limit?: number, agentName?: string): Promise<ConversationsListResult>;
   getConversation(sessionId: string, agentName?: string): Promise<ConversationsGetResult>;
   deleteConversation(sessionId: string, agentName?: string): Promise<ConversationsDeleteResult>;

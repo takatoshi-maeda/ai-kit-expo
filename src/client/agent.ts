@@ -24,6 +24,9 @@ export async function runAgent(client: AiKitClient, options: RunAgentOptions): P
   if (options.sessionId) {
     payload.sessionId = options.sessionId;
   }
+  if (options.runtime) {
+    payload.runtime = options.runtime;
+  }
   if (options.params) {
     payload.params = options.params;
   }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAiKitActiveAgentName, useAiKitClient } from '../runtime';
+import type { AgentRuntimeInput } from '../client';
 import {
   getActiveRun,
   subscribeActiveRun,
@@ -31,6 +32,19 @@ function decodeString(value: unknown): string | undefined {
 
 function decodeNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function decodeRuntime(raw: unknown): AgentRuntimeInput | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const runtime: AgentRuntimeInput = {};
+  const model = decodeString(record.model);
+  const reasoningEffort = decodeString(record.reasoningEffort) ?? decodeString(record.reasoning_effort);
+  const verbosity = decodeString(record.verbosity);
+  if (model) runtime.model = model;
+  if (reasoningEffort) runtime.reasoningEffort = reasoningEffort;
+  if (verbosity) runtime.verbosity = verbosity;
+  return Object.keys(runtime).length > 0 ? runtime : null;
 }
 
 function decodeResultItems(raw: unknown): ResultItem[] | undefined {
@@ -125,6 +139,7 @@ type DecodedConversation = {
   agentName: string | null;
   isInProgress: boolean;
   startedAtMs: number | null;
+  lastRuntime: AgentRuntimeInput | null;
 };
 
 function decodeUserInputParts(raw: unknown): UserInputPart[] {
@@ -254,7 +269,13 @@ function decodeConversationToLogEntries(session: Record<string, unknown>): Decod
     );
   }
 
-  return { entries, agentName, isInProgress, startedAtMs };
+  return {
+    entries,
+    agentName,
+    isInProgress,
+    startedAtMs,
+    lastRuntime: decodeRuntime(session.lastRuntime ?? session.last_runtime),
+  };
 }
 
 const DEFAULT_POLL_INTERVAL = 2000;
@@ -268,6 +289,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
     agentName: null,
     isRunning: false,
     runStartedAt: null,
+    lastRuntime: null,
     isLoading: false,
   });
   const [pollable, setPollable] = useState(false);
@@ -282,6 +304,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
         agentName: null,
         isRunning: false,
         runStartedAt: null,
+        lastRuntime: null,
         isLoading: false,
       });
       setPollable(false);
@@ -296,6 +319,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
         agentName: activeRun.agentName,
         isRunning: activeRun.isRunning,
         runStartedAt: activeRun.startedAt,
+        lastRuntime: null,
         isLoading: false,
       });
       setPollable(false);
@@ -307,6 +331,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
           agentName: snapshot.agentName ?? prev.agentName,
           isRunning: snapshot.isRunning,
           runStartedAt: snapshot.isRunning ? snapshot.startedAt : null,
+          lastRuntime: prev.lastRuntime,
         }));
       });
 
@@ -328,6 +353,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
           agentName: decoded.agentName,
           isRunning: decoded.isInProgress,
           runStartedAt: decoded.startedAtMs,
+          lastRuntime: decoded.lastRuntime,
           isLoading: false,
         });
         setPollable(decoded.isInProgress);
@@ -339,6 +365,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
           agentName: null,
           isRunning: false,
           runStartedAt: null,
+          lastRuntime: null,
           isLoading: false,
         });
       }
@@ -364,6 +391,7 @@ export function useThread(sessionId: string, options: UseThreadOptions = {}): Us
           agentName: decoded.agentName ?? prev.agentName,
           isRunning: decoded.isInProgress,
           runStartedAt: decoded.isInProgress ? decoded.startedAtMs : null,
+          lastRuntime: decoded.lastRuntime ?? prev.lastRuntime,
         }));
         if (!decoded.isInProgress) {
           setPollable(false);

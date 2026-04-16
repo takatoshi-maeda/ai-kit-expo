@@ -14,7 +14,7 @@ import {
   type TextInputKeyPressEventData,
   type TextInputSelectionChangeEventData,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 import type { ComposerImageAttachment } from '../types';
 import {
@@ -57,8 +57,12 @@ function getComposerKeyEventMeta(event: ComposerKeyEvent): {
         : nativeEvent?.isComposing,
     preventDefault: () => {
       event.preventDefault?.();
-      nativeEvent?.preventDefault?.();
-      nativeEvent?.stopPropagation?.();
+      const nativeLikeEvent = nativeEvent as {
+        preventDefault?: () => void;
+        stopPropagation?: () => void;
+      } | undefined;
+      nativeLikeEvent?.preventDefault?.();
+      nativeLikeEvent?.stopPropagation?.();
     },
   };
 }
@@ -100,6 +104,20 @@ function getContrastingIconColor(backgroundColor: string, fallbackColor: string)
   return luminance > 0.68 ? '#111111' : '#ffffff';
 }
 
+function getRuntimeLabel(key: string): string {
+  if (key === 'model') return 'Model';
+  if (key === 'reasoningEffort') return 'Reasoning';
+  if (key === 'verbosity') return 'Verbosity';
+  return key;
+}
+
+function getRuntimeIconName(key: string): keyof typeof Ionicons.glyphMap {
+  if (key === 'model') return 'cube-outline';
+  if (key === 'reasoningEffort') return 'flash-outline';
+  if (key === 'verbosity') return 'ellipse-outline';
+  return 'ellipse-outline';
+}
+
 async function readImageFile(file: File): Promise<ComposerImageAttachment | null> {
   const dataUrl = await new Promise<string | null>((resolve) => {
     const reader = new FileReader();
@@ -128,6 +146,8 @@ export function Composer({
   colors: colorOverrides,
   placeholder = 'メッセージを入力...',
   allowImageAttachments = true,
+  composerAccessory,
+  runtimeControls,
   pathMentions,
 }: ComposerProps): ReactElement {
   const colors = resolveColors(colorOverrides);
@@ -144,6 +164,7 @@ export function Composer({
   const [mentionSelectionIndex, setMentionSelectionIndex] = useState(0);
   const [isMentionLoading, setIsMentionLoading] = useState(false);
   const [dismissedMentionTokenKey, setDismissedMentionTokenKey] = useState<string | null>(null);
+  const [openRuntimeMenuKey, setOpenRuntimeMenuKey] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
   const mentionScrollRef = useRef<ScrollView>(null);
   const isFocusedRef = useRef(false);
@@ -174,6 +195,74 @@ export function Composer({
     && !!activeMention
     && activeMentionTokenKey !== dismissedMentionTokenKey
     && (isMentionLoading || mentionItems.length > 0);
+  const runtimeSections = useMemo(
+    () => {
+      if (!runtimeControls?.policy) return [];
+      return [
+        {
+          key: 'model',
+          label: 'Model',
+          selected: runtimeControls.value?.model ?? null,
+          defaultValue: runtimeControls.policy.defaults?.model ?? null,
+          values: runtimeControls.policy.allowedModels ?? [],
+        },
+        {
+          key: 'reasoningEffort',
+          label: 'Reasoning',
+          selected: runtimeControls.value?.reasoningEffort ?? null,
+          defaultValue: runtimeControls.policy.defaults?.reasoningEffort ?? null,
+          values: runtimeControls.policy.allowedReasoningEfforts ?? [],
+        },
+        {
+          key: 'verbosity',
+          label: 'Verbosity',
+          selected: runtimeControls.value?.verbosity ?? null,
+          defaultValue: runtimeControls.policy.defaults?.verbosity ?? null,
+          values: runtimeControls.policy.allowedVerbosity ?? [],
+        },
+      ]
+        .filter((section) => section.values.length > 0)
+        .map((section) => ({
+          ...section,
+          isModified:
+            section.selected !== null
+            && section.defaultValue !== null
+            && section.selected !== section.defaultValue,
+        }));
+    },
+    [runtimeControls],
+  );
+
+  useEffect(() => {
+    if (runtimeSections.length === 0) {
+      setOpenRuntimeMenuKey(null);
+    } else if (openRuntimeMenuKey && !runtimeSections.some((section) => section.key === openRuntimeMenuKey)) {
+      setOpenRuntimeMenuKey(null);
+    }
+  }, [openRuntimeMenuKey, runtimeSections]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !openRuntimeMenuKey || typeof document === 'undefined') {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        setOpenRuntimeMenuKey(null);
+        return;
+      }
+      if (target.closest('[id^="composer-runtime-dropdown-"]')) {
+        return;
+      }
+      setOpenRuntimeMenuKey(null);
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown);
+    };
+  }, [openRuntimeMenuKey]);
 
   const appendFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -596,7 +685,117 @@ export function Composer({
             />
           </View>
         </View>
+        {runtimeControls?.error ? (
+          <Text style={styles.runtimeErrorText}>
+            {runtimeControls.error}
+          </Text>
+        ) : null}
         <View style={styles.bottomRow}>
+          {(composerAccessory || runtimeSections.length > 0) ? (
+            <View style={styles.controlsWrap}>
+              {composerAccessory ? (
+                <View style={styles.accessoryWrap}>
+                  {composerAccessory}
+                </View>
+              ) : null}
+              {runtimeSections.length > 0 ? (
+                <View style={styles.runtimePanel}>
+                  {runtimeSections.map((section) => (
+                    <View
+                      key={section.key}
+                      nativeID={`composer-runtime-dropdown-${section.key}`}
+                      style={[
+                        styles.runtimeDropdownRoot,
+                        openRuntimeMenuKey === section.key ? styles.runtimeDropdownRootOpen : null,
+                      ]}
+                    >
+                      <Pressable
+                        style={[
+                          styles.runtimeDropdownTrigger,
+                          {
+                            backgroundColor: 'transparent',
+                          },
+                        ]}
+                        onPress={() => {
+                          setOpenRuntimeMenuKey((current) => (
+                            current === section.key ? null : section.key
+                          ));
+                        }}
+                      >
+                        {section.key === 'verbosity' ? (
+                          <AntDesign
+                            name="align-left"
+                            size={15}
+                            color={
+                              openRuntimeMenuKey === section.key
+                                ? colors.tint
+                                : colors.icon
+                            }
+                          />
+                        ) : (
+                          <Ionicons
+                            name={getRuntimeIconName(section.key)}
+                            size={16}
+                            color={
+                              openRuntimeMenuKey === section.key
+                                ? colors.tint
+                                : colors.icon
+                            }
+                          />
+                        )}
+                        {section.isModified ? (
+                          <View style={[styles.runtimeModifiedDot, { backgroundColor: colors.tint }]} />
+                        ) : null}
+                      </Pressable>
+                      {openRuntimeMenuKey === section.key ? (
+                        <View
+                          style={[
+                            styles.runtimeDropdownMenu,
+                            {
+                              backgroundColor: colors.background,
+                              borderColor: `${colors.icon}44`,
+                            },
+                          ]}
+                        >
+                          <View style={[styles.runtimeDropdownMenuHeader, { borderBottomColor: `${colors.icon}22` }]}>
+                            <Text style={[styles.runtimeDropdownMenuTitle, { color: colors.icon }]}>
+                              {getRuntimeLabel(section.key)}
+                            </Text>
+                          </View>
+                          {section.values.map((value) => {
+                            const isSelected = section.selected === value;
+                            return (
+                              <Pressable
+                                key={value}
+                                style={styles.runtimeDropdownItem}
+                                onPress={() => {
+                                  runtimeControls?.onChange({ [section.key]: value });
+                                  setOpenRuntimeMenuKey(null);
+                                }}
+                              >
+                                <Text
+                                  numberOfLines={1}
+                                  style={[
+                                    styles.runtimeDropdownItemText,
+                                    { color: isSelected ? colors.tint : colors.text },
+                                  ]}
+                                >
+                                  {value}
+                                </Text>
+                                {isSelected ? (
+                                  <Ionicons name="checkmark" size={14} color={colors.tint} />
+                                ) : null}
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           {allowImageAttachments ? (
             <Pressable style={styles.button} onPress={handleAttachPress} disabled={isSubmitting || Platform.OS !== 'web'}>
               <Ionicons
@@ -643,8 +842,88 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     gap: 8,
+  },
+  controlsWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 6,
+    paddingRight: 8,
+  },
+  accessoryWrap: {
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  runtimePanel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 4,
+    minWidth: 0,
+  },
+  runtimeDropdownRoot: {
+    position: 'relative',
+    minWidth: 0,
+  },
+  runtimeDropdownRootOpen: {
+    zIndex: 40,
+  },
+  runtimeDropdownTrigger: {
+    height: 32,
+    width: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 0,
+  },
+  runtimeDropdownMenu: {
+    position: 'absolute',
+    right: 0,
+    bottom: '100%',
+    marginBottom: 6,
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+    alignSelf: 'flex-start',
+  },
+  runtimeDropdownMenuHeader: {
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    gap: 2,
+  },
+  runtimeDropdownMenuTitle: {
+    fontSize: 12,
+    fontWeight: '400',
+  },
+  runtimeDropdownItem: {
+    minHeight: 32,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  runtimeDropdownItemText: {
+    fontSize: 12,
+    fontWeight: '500',
+    flexShrink: 0,
+  },
+  runtimeModifiedDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  runtimeErrorText: {
+    color: '#f87171',
+    fontSize: 12,
   },
   attachmentRow: {
     flexDirection: 'row',
@@ -681,7 +960,6 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     padding: 0,
     outlineWidth: 0,
-    outlineStyle: 'none',
     outlineColor: 'transparent',
     fontSize: 14,
     maxHeight: 120,

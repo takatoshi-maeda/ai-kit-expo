@@ -1,3 +1,4 @@
+export { listAgents } from './agents';
 export { createAiKitClient, createAiKitDocumentClient, DEFAULT_TOOL_NAMES } from './factory';
 export { deleteConversation, getConversation, listConversations } from './conversations';
 export {
@@ -17,8 +18,12 @@ export type {
   AiKitDocumentClient,
   AiKitDocumentClientConfig,
   AgentInputItem,
+  AgentListEntry,
   AgentRunResult,
+  AgentRuntimeInput,
+  AgentRuntimePolicy,
   AgentStreamPayload,
+  AgentsListResult,
   AiKitFetch,
   AiKitHeadersResolver,
   AiKitInjectedDependencies,

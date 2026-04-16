@@ -1,3 +1,4 @@
+import { listAgents } from './agents';
 import { runAgent } from './agent';
 import { deleteConversation, getConversation, listConversations } from './conversations';
 import {
@@ -18,6 +19,7 @@ import type {
 import { getUsageSummary } from './usage';
 
 export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
+  agentList: 'agent.list',
   agentRun: 'agent.run',
   conversationList: 'conversations.list',
   conversationGet: 'conversations.get',
@@ -99,6 +101,9 @@ export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
     kind: 'ai-kit-client',
     config: frozenConfig,
     documents,
+    listAgents(agentName) {
+      return listAgents(client, agentName);
+    },
     listConversations(limit, agentName) {
       return listConversations(client, limit, agentName);
     },

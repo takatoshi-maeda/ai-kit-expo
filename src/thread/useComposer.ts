@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { AgentRuntimeInput, AgentRuntimePolicy } from '../client';
 import { useAiKitActiveAgentName, useAiKitClient } from '../runtime';
 import {
   completeActiveRun,
@@ -82,6 +83,96 @@ function buildUserInputParts(text: string, attachments: ComposerImageAttachment[
   return parts;
 }
 
+function cloneRuntime(runtime: AgentRuntimeInput | null | undefined): AgentRuntimeInput | null {
+  if (!runtime) return null;
+  const next: AgentRuntimeInput = {};
+  if (typeof runtime.model === 'string' && runtime.model.trim().length > 0) {
+    next.model = runtime.model;
+  }
+  if (typeof runtime.reasoningEffort === 'string' && runtime.reasoningEffort.trim().length > 0) {
+    next.reasoningEffort = runtime.reasoningEffort;
+  }
+  if (typeof runtime.verbosity === 'string' && runtime.verbosity.trim().length > 0) {
+    next.verbosity = runtime.verbosity;
+  }
+  return Object.keys(next).length > 0 ? next : null;
+}
+
+function cloneRuntimePolicy(policy: AgentRuntimePolicy | null | undefined): AgentRuntimePolicy | null {
+  if (!policy) return null;
+  return {
+    provider: policy.provider,
+    defaults: cloneRuntime(policy.defaults) ?? undefined,
+    allowedModels: Array.isArray(policy.allowedModels) ? [...policy.allowedModels] : undefined,
+    allowedReasoningEfforts: Array.isArray(policy.allowedReasoningEfforts)
+      ? [...policy.allowedReasoningEfforts]
+      : undefined,
+    allowedVerbosity: Array.isArray(policy.allowedVerbosity) ? [...policy.allowedVerbosity] : undefined,
+  };
+}
+
+function validateRuntime(runtime: AgentRuntimeInput | null, policy: AgentRuntimePolicy | null): string | null {
+  if (!runtime || !policy) return null;
+  if (
+    runtime.model
+    && Array.isArray(policy.allowedModels)
+    && policy.allowedModels.length > 0
+    && !policy.allowedModels.includes(runtime.model)
+  ) {
+    return `model "${runtime.model}" is not allowed for this agent`;
+  }
+  if (
+    runtime.reasoningEffort
+    && Array.isArray(policy.allowedReasoningEfforts)
+    && policy.allowedReasoningEfforts.length > 0
+    && !policy.allowedReasoningEfforts.includes(runtime.reasoningEffort)
+  ) {
+    return `reasoningEffort "${runtime.reasoningEffort}" is not allowed for this agent`;
+  }
+  if (
+    runtime.verbosity
+    && Array.isArray(policy.allowedVerbosity)
+    && policy.allowedVerbosity.length > 0
+    && !policy.allowedVerbosity.includes(runtime.verbosity)
+  ) {
+    return `verbosity "${runtime.verbosity}" is not allowed for this agent`;
+  }
+  return null;
+}
+
+function resolveDefaultRuntimePolicy(policy: AgentRuntimePolicy | null): AgentRuntimeInput | null {
+  return cloneRuntime(policy?.defaults);
+}
+
+function selectRuntimePolicy(args: {
+  agents: Array<{
+    agentId: string;
+    runtimePolicy?: AgentRuntimePolicy | null;
+  }>;
+  defaultAgentId: string | null;
+  resolvedAgentName: string;
+  threadAgentName: string | null;
+}): AgentRuntimePolicy | null {
+  const candidates = [
+    args.threadAgentName,
+    args.resolvedAgentName,
+    args.defaultAgentId,
+  ].filter((value, index, array): value is string => typeof value === 'string' && array.indexOf(value) === index);
+
+  for (const candidate of candidates) {
+    const matched = args.agents.find((item) => item.agentId === candidate);
+    if (matched?.runtimePolicy) {
+      return cloneRuntimePolicy(matched.runtimePolicy);
+    }
+  }
+
+  if (args.agents.length === 1) {
+    return cloneRuntimePolicy(args.agents[0]?.runtimePolicy) ?? null;
+  }
+
+  return null;
+}
+
 export function useComposer(
   sessionId: string,
   thread: UseThreadResult,
@@ -90,12 +181,98 @@ export function useComposer(
   const client = useAiKitClient();
   const activeAgentName = useAiKitActiveAgentName();
   const resolvedAgentName = options.agentName ?? activeAgentName;
+  const runtimeEnabled = options.runtime?.enabled === true;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [runtimePolicy, setRuntimePolicy] = useState<AgentRuntimePolicy | null>(null);
+  const [runtime, setRuntimeState] = useState<AgentRuntimeInput | null>(
+    cloneRuntime(options.runtime?.initialValue) ?? null,
+  );
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const abortRequestedRef = useRef(false);
   const sessionIdRef = useRef(sessionId);
+  const runtimeSourceSessionRef = useRef<string | null>(null);
+  const runtimeSourceAgentRef = useRef<string | null>(null);
   sessionIdRef.current = sessionId;
+
+  const setRuntime = useCallback<UseComposerResult['setRuntime']>((next) => {
+    setRuntimeState((prev) => {
+      const resolved = typeof next === 'function' ? next(prev) : next;
+      return cloneRuntime(resolved);
+    });
+    setRuntimeError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!runtimeEnabled) {
+      setRuntimePolicy(null);
+      setRuntimeState(null);
+      setRuntimeError(null);
+      runtimeSourceSessionRef.current = null;
+      runtimeSourceAgentRef.current = null;
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const payload = await client.listAgents(resolvedAgentName);
+        if (cancelled) return;
+        const agents = Array.isArray(payload.agents) ? payload.agents : [];
+        setRuntimePolicy(selectRuntimePolicy({
+          agents,
+          defaultAgentId: payload.defaultAgentId,
+          resolvedAgentName,
+          threadAgentName: thread.agentName,
+        }));
+      } catch {
+        if (cancelled) return;
+        setRuntimePolicy(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, resolvedAgentName, runtimeEnabled, thread.agentName]);
+
+  useEffect(() => {
+    if (!runtimeEnabled) return;
+
+    const sessionKey = `${resolvedAgentName}:${sessionId}`;
+    if (thread.lastRuntime && runtimeSourceSessionRef.current !== sessionKey) {
+      runtimeSourceSessionRef.current = sessionKey;
+      runtimeSourceAgentRef.current = resolvedAgentName;
+      setRuntimeState(cloneRuntime(thread.lastRuntime));
+      setRuntimeError(null);
+      return;
+    }
+
+    if (sessionId === 'new' && runtimeSourceAgentRef.current !== resolvedAgentName) {
+      runtimeSourceSessionRef.current = sessionKey;
+      runtimeSourceAgentRef.current = resolvedAgentName;
+      setRuntimeState(cloneRuntime(options.runtime?.initialValue));
+      setRuntimeError(null);
+    }
+  }, [options.runtime?.initialValue, resolvedAgentName, runtimeEnabled, sessionId, thread.lastRuntime]);
+
+  useEffect(() => {
+    if (!runtimeEnabled) return;
+    if (thread.lastRuntime) return;
+    if (runtime) return;
+    const defaults = resolveDefaultRuntimePolicy(runtimePolicy);
+    if (!defaults) return;
+    setRuntimeState(defaults);
+  }, [runtime, runtimeEnabled, runtimePolicy, thread.lastRuntime]);
+
+  useEffect(() => {
+    if (!runtimeEnabled) {
+      setRuntimeError(null);
+      return;
+    }
+    setRuntimeError(validateRuntime(runtime, runtimePolicy));
+  }, [runtime, runtimeEnabled, runtimePolicy]);
 
   const appendSystemMessage = useCallback(
     (message: string) => {
@@ -122,6 +299,8 @@ export function useComposer(
           : hasAttachments
             ? '添付画像を確認してください。'
             : text;
+      const params = options.resolveParams?.();
+      const runtimeForRequest = runtimeEnabled ? cloneRuntime(runtime) ?? undefined : undefined;
 
       const userEntry: UserCommandLogEntry = {
         id: createUniqueId('log-user'),
@@ -176,6 +355,8 @@ export function useComposer(
           input: hasAttachments ? input : undefined,
           sessionId: activeSessionId === 'new' ? undefined : activeSessionId,
           agentName: resolvedAgentName,
+          runtime: runtimeForRequest,
+          params,
           signal: controller.signal,
           onStreamEvent: (payload) => {
             if (!hasRefreshedList) {
@@ -277,7 +458,7 @@ export function useComposer(
         }, 0);
       }
     },
-    [client, options, resolvedAgentName, thread],
+    [client, options, resolvedAgentName, runtime, runtimeEnabled, thread],
   );
 
   const submit = useCallback(
@@ -297,6 +478,12 @@ export function useComposer(
         return;
       }
 
+      const validationError = runtimeEnabled ? validateRuntime(runtime, runtimePolicy) : null;
+      if (validationError) {
+        setRuntimeError(validationError);
+        return;
+      }
+
       setIsSubmitting(true);
       try {
         await submitToAgent(text, attachments);
@@ -304,8 +491,26 @@ export function useComposer(
         setIsSubmitting(false);
       }
     },
-    [appendSystemMessage, isSubmitting, options, submitToAgent, thread],
+    [
+      appendSystemMessage,
+      isSubmitting,
+      options,
+      runtime,
+      runtimeEnabled,
+      runtimePolicy,
+      submitToAgent,
+      thread,
+    ],
   );
 
-  return { submit, abort, isSubmitting, commandHistory };
+  return {
+    submit,
+    abort,
+    isSubmitting,
+    commandHistory,
+    runtime,
+    setRuntime,
+    runtimePolicy,
+    runtimeError,
+  };
 }
