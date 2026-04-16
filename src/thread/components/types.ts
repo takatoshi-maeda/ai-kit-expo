@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { ThreadPathMentionCandidate } from '@/lib/threadPathMentions';
+import type { ThreadPathMentionCandidate } from '../pathMentions';
 
 import type {
   ComposerImageAttachment,

@@ -17,14 +17,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import type { ComposerImageAttachment } from '../types';
-import { resolveColors } from './colors';
-import type { ComposerProps } from './types';
 import {
   findActiveThreadPathMention,
   replaceActiveThreadPathMention,
   type ThreadPathMentionCandidate,
   type ThreadPathMentionSelection,
-} from '@/lib/threadPathMentions';
+} from '../pathMentions';
+import { resolveColors } from './colors';
+import type { ComposerProps } from './types';
 
 type ComposerNativeKeyEvent = NativeSyntheticEvent<TextInputKeyPressEventData> & {
   nativeEvent: TextInputKeyPressEventData & { shiftKey?: boolean; isComposing?: boolean };

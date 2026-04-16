@@ -42,6 +42,8 @@ export type {
 export {
   CheckpointPanel,
   Composer,
+  findActiveThreadPathMention,
+  replaceActiveThreadPathMention,
   ThreadDetail,
   ThreadList,
   ThreadMessageView,
@@ -51,6 +53,7 @@ export {
   useThreadMessages,
 } from './thread';
 export type {
+  ActiveThreadPathMention,
   CheckpointPanelProps,
   ComposerProps,
   ComposerImageAttachment,
@@ -61,6 +64,8 @@ export type {
   ThreadListItem,
   ThreadMessage,
   ThreadMessageAttachment,
+  ThreadPathMentionCandidate,
+  ThreadPathMentionSelection,
   ThreadMessageViewProps,
   ThreadPaneProps,
   ThreadUiColors,

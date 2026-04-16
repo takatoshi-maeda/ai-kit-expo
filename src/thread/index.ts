@@ -13,6 +13,7 @@ export { dispatchStreamEvent, finalizeAgentEntry } from './streamReducers';
 export { useThread } from './useThread';
 export { useComposer } from './useComposer';
 export { useThreadMessages } from './useThreadMessages';
+export { findActiveThreadPathMention, replaceActiveThreadPathMention } from './pathMentions';
 export {
   CheckpointPanel,
   Composer,
@@ -52,3 +53,8 @@ export type {
   ThreadPaneProps,
   ThreadUiColors,
 } from './components';
+export type {
+  ActiveThreadPathMention,
+  ThreadPathMentionCandidate,
+  ThreadPathMentionSelection,
+} from './pathMentions';
