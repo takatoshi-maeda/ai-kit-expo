@@ -111,6 +111,57 @@ function cloneRuntimePolicy(policy: AgentRuntimePolicy | null | undefined): Agen
   };
 }
 
+function resolveRuntimeForRequest(
+  runtime: AgentRuntimeInput | null | undefined,
+  policy: AgentRuntimePolicy | null | undefined,
+): AgentRuntimeInput | null {
+  const defaults = cloneRuntime(policy?.defaults);
+  const overrides = cloneRuntime(runtime);
+  if (!defaults && !overrides) {
+    return null;
+  }
+  return {
+    ...(defaults ?? {}),
+    ...(overrides ?? {}),
+  };
+}
+
+function pruneRuntimeByPolicy(
+  runtime: AgentRuntimeInput | null | undefined,
+  policy: AgentRuntimePolicy | null | undefined,
+): AgentRuntimeInput | null {
+  const next = cloneRuntime(runtime);
+  if (!next) return null;
+  if (!policy) return next;
+
+  if (
+    next.model
+    && Array.isArray(policy.allowedModels)
+    && policy.allowedModels.length > 0
+    && !policy.allowedModels.includes(next.model)
+  ) {
+    delete next.model;
+  }
+  if (
+    next.reasoningEffort
+    && Array.isArray(policy.allowedReasoningEfforts)
+    && policy.allowedReasoningEfforts.length > 0
+    && !policy.allowedReasoningEfforts.includes(next.reasoningEffort)
+  ) {
+    delete next.reasoningEffort;
+  }
+  if (
+    next.verbosity
+    && Array.isArray(policy.allowedVerbosity)
+    && policy.allowedVerbosity.length > 0
+    && !policy.allowedVerbosity.includes(next.verbosity)
+  ) {
+    delete next.verbosity;
+  }
+
+  return Object.keys(next).length > 0 ? next : null;
+}
+
 function validateRuntime(runtime: AgentRuntimeInput | null, policy: AgentRuntimePolicy | null): string | null {
   if (!runtime || !policy) return null;
   if (
@@ -184,7 +235,8 @@ export function useComposer(
   const [runtime, setRuntimeState] = useState<AgentRuntimeInput | null>(
     cloneRuntime(options.runtime?.initialValue) ?? null,
   );
-  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [runtimeValidationError, setRuntimeValidationError] = useState<string | null>(null);
+  const [runtimeSelectionError, setRuntimeSelectionError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const abortRequestedRef = useRef(false);
   const sessionIdRef = useRef(sessionId);
@@ -193,18 +245,22 @@ export function useComposer(
   sessionIdRef.current = sessionId;
 
   const setRuntime = useCallback<UseComposerResult['setRuntime']>((next) => {
+    let selectionError: string | null = null;
     setRuntimeState((prev) => {
       const resolved = typeof next === 'function' ? next(prev) : next;
-      return cloneRuntime(resolved);
+      const normalized = cloneRuntime(resolved);
+      selectionError = validateRuntime(normalized, runtimePolicy);
+      return pruneRuntimeByPolicy(normalized, runtimePolicy);
     });
-    setRuntimeError(null);
-  }, []);
+    setRuntimeSelectionError(selectionError);
+  }, [runtimePolicy]);
 
   useEffect(() => {
     if (!runtimeEnabled) {
       setRuntimePolicy(null);
       setRuntimeState(null);
-      setRuntimeError(null);
+      setRuntimeValidationError(null);
+      setRuntimeSelectionError(null);
       runtimeSourceSessionRef.current = null;
       runtimeSourceAgentRef.current = null;
       return;
@@ -240,26 +296,35 @@ export function useComposer(
     if (thread.lastRuntime && runtimeSourceSessionRef.current !== sessionKey) {
       runtimeSourceSessionRef.current = sessionKey;
       runtimeSourceAgentRef.current = resolvedAgentName;
-      setRuntimeState(cloneRuntime(thread.lastRuntime));
-      setRuntimeError(null);
+      setRuntimeState(pruneRuntimeByPolicy(thread.lastRuntime, runtimePolicy));
+      setRuntimeValidationError(null);
+      setRuntimeSelectionError(null);
       return;
     }
 
     if (sessionId === 'new' && runtimeSourceAgentRef.current !== resolvedAgentName) {
       runtimeSourceSessionRef.current = sessionKey;
       runtimeSourceAgentRef.current = resolvedAgentName;
-      setRuntimeState(cloneRuntime(options.runtime?.initialValue));
-      setRuntimeError(null);
+      setRuntimeState(pruneRuntimeByPolicy(options.runtime?.initialValue, runtimePolicy));
+      setRuntimeValidationError(null);
+      setRuntimeSelectionError(null);
     }
-  }, [options.runtime?.initialValue, resolvedAgentName, runtimeEnabled, sessionId, thread.lastRuntime]);
+  }, [options.runtime?.initialValue, resolvedAgentName, runtimeEnabled, runtimePolicy, sessionId, thread.lastRuntime]);
+
+  useEffect(() => {
+    if (!runtimeEnabled) return;
+    setRuntimeState((prev) => pruneRuntimeByPolicy(prev, runtimePolicy));
+  }, [runtimeEnabled, runtimePolicy]);
 
   useEffect(() => {
     if (!runtimeEnabled) {
-      setRuntimeError(null);
+      setRuntimeValidationError(null);
       return;
     }
-    setRuntimeError(validateRuntime(runtime, runtimePolicy));
+    setRuntimeValidationError(validateRuntime(runtime, runtimePolicy));
   }, [runtime, runtimeEnabled, runtimePolicy]);
+
+  const runtimeError = runtimeSelectionError ?? runtimeValidationError;
 
   const appendSystemMessage = useCallback(
     (message: string) => {
@@ -287,7 +352,9 @@ export function useComposer(
             ? '添付画像を確認してください。'
             : text;
       const params = options.resolveParams?.();
-      const runtimeForRequest = runtimeEnabled ? cloneRuntime(runtime) ?? undefined : undefined;
+      const runtimeForRequest = runtimeEnabled
+        ? resolveRuntimeForRequest(runtime, runtimePolicy) ?? undefined
+        : undefined;
 
       const userEntry: UserCommandLogEntry = {
         id: createUniqueId('log-user'),
@@ -468,7 +535,7 @@ export function useComposer(
 
       const validationError = runtimeEnabled ? validateRuntime(runtime, runtimePolicy) : null;
       if (validationError) {
-        setRuntimeError(validationError);
+        setRuntimeValidationError(validationError);
         return;
       }
 
