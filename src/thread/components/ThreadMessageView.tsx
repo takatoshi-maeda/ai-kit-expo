@@ -238,9 +238,9 @@ function InlineTimelineItem({
           <Pressable style={timelineStyles.artifactCardHeaderMain} onPress={() => setArtifactExpanded((value) => !value)}>
             <Text style={[timelineStyles.artifactAction, { color: colors.timelineArg }]}>{action}</Text>
             <Ionicons
-              name={artifactExpanded ? 'chevron-down' : 'chevron-up'}
-              size={14}
-              color={colors.icon}
+              name={artifactExpanded ? 'chevron-down' : 'chevron-forward'}
+              size={10}
+              color={colors.timelineArg}
             />
           </Pressable>
           {onCopyMessage ? (
@@ -735,7 +735,7 @@ const timelineStyles = StyleSheet.create({
   artifactCardHeaderMain: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 1,
   },
   artifactAction: {
     fontSize: 11,
