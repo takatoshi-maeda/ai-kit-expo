@@ -644,9 +644,12 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     margin: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderRadius: 0,
     padding: 0,
     outlineWidth: 0,
+    outlineStyle: 'none',
     outlineColor: 'transparent',
     fontSize: 14,
     maxHeight: 120,
