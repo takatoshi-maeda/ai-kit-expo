@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { AgentResponseLogEntry, AgentTimelineItem } from '../types';
@@ -227,6 +227,8 @@ function InlineTimelineItem({
     const stats = countDiffStats(item.text);
     const palette = getArtifactPalette(colors);
 
+    const isArtifactRunning = item.status === 'running';
+
     return (
       <View
         style={[
@@ -258,24 +260,33 @@ function InlineTimelineItem({
               ]}
             >
               <View style={timelineStyles.artifactFileNameWrap}>
-                <Pressable
-                  disabled={!item.path}
-                  onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
-                  onHoverIn={() => setArtifactPathHovered(true)}
-                  onHoverOut={() => setArtifactPathHovered(false)}
-                  style={timelineStyles.artifactFileNamePressable}
-                >
-                  <Text
-                    style={[
-                      timelineStyles.artifactFileName,
-                      timelineStyles.artifactFileNameLink,
-                      { color: colors.tint },
-                    ]}
-                    numberOfLines={1}
+                <View style={timelineStyles.artifactFileNameRow}>
+                  {isArtifactRunning ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.tint}
+                      style={timelineStyles.artifactFileSpinner}
+                    />
+                  ) : null}
+                  <Pressable
+                    disabled={!item.path}
+                    onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
+                    onHoverIn={() => setArtifactPathHovered(true)}
+                    onHoverOut={() => setArtifactPathHovered(false)}
+                    style={timelineStyles.artifactFileNamePressable}
                   >
-                    {title}
-                  </Text>
-                </Pressable>
+                    <Text
+                      style={[
+                        timelineStyles.artifactFileName,
+                        timelineStyles.artifactFileNameLink,
+                        { color: colors.tint },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {title}
+                    </Text>
+                  </Pressable>
+                </View>
                 {item.path && artifactPathHovered ? (
                   <View
                     style={[
@@ -362,17 +373,26 @@ function InlineTimelineItem({
             ]}
           >
             <View style={timelineStyles.artifactFileNameWrap}>
-              <Pressable
-                disabled={!item.path}
-                onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
-                onHoverIn={() => setArtifactPathHovered(true)}
-                onHoverOut={() => setArtifactPathHovered(false)}
-                style={timelineStyles.artifactFileNamePressable}
-              >
-                <Text style={[timelineStyles.artifactCollapsedTitle, { color: colors.tint }]} numberOfLines={1}>
-                  {title}
-                </Text>
-              </Pressable>
+              <View style={timelineStyles.artifactFileNameRow}>
+                {isArtifactRunning ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.tint}
+                    style={timelineStyles.artifactFileSpinner}
+                  />
+                ) : null}
+                <Pressable
+                  disabled={!item.path}
+                  onPress={() => item.path ? void onOpenArtifactPath?.(item.path) : undefined}
+                  onHoverIn={() => setArtifactPathHovered(true)}
+                  onHoverOut={() => setArtifactPathHovered(false)}
+                  style={timelineStyles.artifactFileNamePressable}
+                >
+                  <Text style={[timelineStyles.artifactCollapsedTitle, { color: colors.tint }]} numberOfLines={1}>
+                    {title}
+                  </Text>
+                </Pressable>
+              </View>
               {item.path && artifactPathHovered ? (
                 <View
                   style={[
@@ -776,13 +796,28 @@ const timelineStyles = StyleSheet.create({
     minWidth: 0,
     position: 'relative',
   },
+  artifactFileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+  },
+  artifactFileSpinner: {
+    width: 12,
+    height: 12,
+    transform: [{ scale: 0.8 }],
+  },
   artifactFileNamePressable: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
+    flexShrink: 1,
   },
   artifactFileName: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  artifactFileNameLink: {
+    textDecorationLine: 'underline',
   },
   artifactStats: {
     flexDirection: 'row',
