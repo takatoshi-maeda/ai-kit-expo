@@ -72,6 +72,19 @@ function normalizeItemType(value: unknown): NormalizedResultType | undefined {
   return undefined;
 }
 
+function normalizePartType(value: unknown): PartType | undefined {
+  if (value === 'ToolCall' || value === 'TextResult' || value === 'ReasoningSummary') {
+    return value;
+  }
+  if (typeof value !== 'string') return undefined;
+  if (value === 'tool_call' || value === 'tool-call' || value === 'tool') return 'ToolCall';
+  if (value === 'text' || value === 'text_result' || value === 'text-result') return 'TextResult';
+  if (value === 'reasoning' || value === 'reasoning_summary' || value === 'reasoning-summary') {
+    return 'ReasoningSummary';
+  }
+  return undefined;
+}
+
 export function parseAgentStreamLine(line: string): AgentStreamEvent | undefined {
   const trimmed = line.trim();
   if (!trimmed) return undefined;
@@ -183,18 +196,13 @@ export function parseAgentStreamLine(line: string): AgentStreamEvent | undefined
   }
 
   if (type === 'agent.part_added' || type === 'agent.part_done') {
-    const partType = payload.part_type;
-    if (
-      partType !== 'ToolCall' &&
-      partType !== 'TextResult' &&
-      partType !== 'ReasoningSummary'
-    ) {
-      return undefined;
-    }
+    const part = isRecord(payload.part) ? payload.part : undefined;
+    const partType = normalizePartType(payload.part_type ?? part?.type);
+    if (!partType) return undefined;
     return {
       kind: type === 'agent.part_added' ? 'partAdded' : 'partDone',
       partType,
-      partId: str(payload.part_id),
+      partId: str(payload.part_id ?? part?.id),
     };
   }
 

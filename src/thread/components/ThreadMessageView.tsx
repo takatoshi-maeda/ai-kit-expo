@@ -176,14 +176,7 @@ function InlineTimelineItem({
   const [artifactPathHovered, setArtifactPathHovered] = useState(false);
 
   if (item.kind === 'reasoning') {
-    return (
-      <View style={timelineStyles.item}>
-        <View style={timelineStyles.header}>
-          <TimelineDot running={item.status === 'running'} colors={colors} />
-          <Text style={[timelineStyles.label, { color: colors.timelineLabel }]}>Thinking</Text>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   if (item.kind === 'tool-call') {
@@ -451,20 +444,24 @@ function AgentInlineTimeline({
   const [expanded, setExpanded] = useState(false);
   const timeline = entry.timeline;
   const isRunning = entry.status === 'running';
+  const hasRunningTool = timeline.some((item) => item.kind === 'tool-call' && item.status === 'running');
+  const hasRunningArtifact = timeline.some((item) => item.kind === 'artifact' && item.status === 'running');
+  const hasRunningText = timeline.some(
+    (item) => item.kind === 'text' && item.text.trim().length > 0 && item.completedAt == null,
+  );
+  const displayTimeline = timeline.filter((item) => item.kind !== 'reasoning');
 
   if (timeline.length === 0 && !isRunning) return null;
 
-  const hasThinkingOrTool = timeline.some((item) => item.kind === 'reasoning' || item.kind === 'tool-call');
-  const hasArtifact = timeline.some((item) => item.kind === 'artifact');
   const hasTimelineText = timeline.some((item) => item.kind === 'text' && item.text.trim().length > 0);
-  const hasResponseText = Boolean(entry.responseText?.trim());
-  const showSyntheticThinking = isRunning && !hasThinkingOrTool && !hasArtifact && !hasResponseText;
-  const hiddenCount = expanded ? 0 : Math.max(0, timeline.length - INITIAL_VISIBLE_TIMELINE);
-  const visibleItems = expanded ? timeline : timeline.slice(hiddenCount);
+  const showSyntheticThinking =
+    isRunning && !hasRunningTool && !hasRunningArtifact && !hasRunningText;
+  const hiddenCount = expanded ? 0 : Math.max(0, displayTimeline.length - INITIAL_VISIBLE_TIMELINE);
+  const visibleItems = expanded ? displayTimeline : displayTimeline.slice(hiddenCount);
   const elapsed = isRunning ? liveElapsed : entry.elapsedSeconds;
   const durationText = isRunning
     ? `Working ${formatDuration(elapsed ?? 0)}`
-    : elapsed != null && elapsed > 0
+      : elapsed != null && elapsed > 0
       ? `Worked for ${formatDuration(elapsed)}`
       : null;
   const costItem = timeline.find((item) => item.kind === 'cumulative-cost');
@@ -482,19 +479,11 @@ function AgentInlineTimeline({
           <Ionicons name="chevron-down" size={14} color={colors.tint} />
           <Text style={[timelineStyles.showEarlierText, { color: colors.tint }]}>Show {hiddenCount} earlier</Text>
         </Pressable>
-      ) : expanded && timeline.length > INITIAL_VISIBLE_TIMELINE ? (
+      ) : expanded && displayTimeline.length > INITIAL_VISIBLE_TIMELINE ? (
         <Pressable onPress={() => setExpanded(false)} style={timelineStyles.showEarlier}>
           <Ionicons name="chevron-up" size={14} color={colors.tint} />
           <Text style={[timelineStyles.showEarlierText, { color: colors.tint }]}>Show less</Text>
         </Pressable>
-      ) : null}
-      {showSyntheticThinking ? (
-        <View style={timelineStyles.item}>
-          <View style={timelineStyles.header}>
-            <TimelineDot running colors={colors} />
-            <Text style={[timelineStyles.label, { color: colors.timelineLabel }]}>Thinking</Text>
-          </View>
-        </View>
       ) : null}
       {visibleItems.map((item) => (
         <InlineTimelineItem
@@ -505,6 +494,14 @@ function AgentInlineTimeline({
           onOpenArtifactPath={onOpenArtifactPath}
         />
       ))}
+      {showSyntheticThinking ? (
+        <View style={timelineStyles.item}>
+          <View style={timelineStyles.header}>
+            <TimelineDot running colors={colors} />
+            <Text style={[timelineStyles.label, { color: colors.timelineLabel }]}>Thinking</Text>
+          </View>
+        </View>
+      ) : null}
       {!hasTimelineText && entry.responseText?.trim() ? (
         <View style={timelineStyles.responseBlock}>
           <View style={[timelineStyles.dot, { backgroundColor: colors.timelineDotBlue, marginTop: 6 }]} />
