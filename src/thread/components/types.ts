@@ -68,6 +68,7 @@ export type ComposerProps = {
   onSubmit: (text: string, attachments: ComposerImageAttachment[]) => void;
   onAbort: () => void;
   isSubmitting: boolean;
+  onFocus?: () => void;
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
@@ -111,6 +112,7 @@ export type ThreadPaneProps = {
   onSubmit: (text: string, attachments: ComposerImageAttachment[]) => void;
   onAbort: () => void;
   isSubmitting: boolean;
+  onComposerFocus?: () => void;
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;

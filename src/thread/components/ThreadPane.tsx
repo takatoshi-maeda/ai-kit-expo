@@ -17,6 +17,7 @@ export function ThreadPane({
   onSubmit,
   onAbort,
   isSubmitting,
+  onComposerFocus,
   colors,
   placeholder,
   allowImageAttachments,
@@ -195,6 +196,7 @@ export function ThreadPane({
         onSubmit={onSubmit}
         onAbort={onAbort}
         isSubmitting={isSubmitting}
+        onFocus={onComposerFocus}
         colors={palette}
         placeholder={placeholder}
         allowImageAttachments={allowImageAttachments}

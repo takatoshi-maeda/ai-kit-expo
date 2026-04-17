@@ -153,6 +153,7 @@ export function Composer({
   onSubmit,
   onAbort,
   isSubmitting,
+  onFocus,
   colors: colorOverrides,
   placeholder = 'メッセージを入力...',
   allowImageAttachments = true,
@@ -724,7 +725,10 @@ export function Composer({
               onChangeText={setText}
               onKeyPress={handleKeyPress}
               onSelectionChange={handleSelectionChange}
-              onFocus={() => setIsFocused(true)}
+              onFocus={() => {
+                setIsFocused(true);
+                onFocus?.();
+              }}
               onBlur={() => {
                 if (isPointerSelectingMentionRef.current) {
                   requestAnimationFrame(() => {
