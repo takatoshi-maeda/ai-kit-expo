@@ -107,6 +107,12 @@ export type ThreadPaneProps = {
     onSelect: (key: string) => void;
   };
   headerAccessory?: ReactNode;
+  usageSummary?: {
+    cumulativeUsd?: number;
+    monthlyUsd?: number;
+    weeklyUsd?: number;
+    dailyUsd?: number;
+  };
   messages: ThreadMessage[];
   elapsedSeconds: number;
   onSubmit: (text: string, attachments: ComposerImageAttachment[]) => void;

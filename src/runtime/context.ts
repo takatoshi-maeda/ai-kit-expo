@@ -7,7 +7,7 @@ import type {
   AiKitMcpStatus,
   AiKitStatusFetcher,
 } from './config';
-import type { AiKitUsageLogEntry, AiKitUsageStatus } from './useUsage';
+import type { AiKitUsageLogEntry, AiKitUsageStatus, AiKitUsageSummary } from './useUsage';
 
 export type AiKitRuntimeValue = {
   client: AiKitClient;
@@ -21,6 +21,7 @@ export type AiKitRuntimeValue = {
   refreshMcpStatus: (options?: { warmup?: boolean }) => Promise<void>;
   usageStatus: AiKitUsageStatus;
   usageUsd: number | undefined;
+  usageSummary: AiKitUsageSummary | undefined;
   refreshUsage: () => Promise<void>;
   syncUsageFromLogEntries: (entries: AiKitUsageLogEntry[]) => void;
   sessions: import('../client').ConversationSummary[];

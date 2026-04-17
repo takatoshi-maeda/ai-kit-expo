@@ -119,6 +119,7 @@ export function AiKitProvider({ children, client, config }: AiKitProviderProps):
       refreshMcpStatus: mcp.refresh,
       usageStatus: usage.usageStatus,
       usageUsd: usage.usageUsd,
+      usageSummary: usage.usageSummary,
       refreshUsage: usage.refreshUsage,
       syncUsageFromLogEntries: usage.syncUsageFromLogEntries,
       sessions: sessions.sessions,
@@ -142,6 +143,7 @@ export function AiKitProvider({ children, client, config }: AiKitProviderProps):
       usage.refreshUsage,
       usage.syncUsageFromLogEntries,
       usage.usageStatus,
+      usage.usageSummary,
       usage.usageUsd,
     ],
   );

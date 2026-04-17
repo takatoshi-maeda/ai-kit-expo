@@ -32,6 +32,16 @@ export type AiKitToolNameConfig = {
   healthGet: string;
 };
 
+export type UsageCostSummary = {
+  totalUsd?: number;
+  totalByCurrency?: Record<string, number>;
+};
+
+export type UsagePeriodSummary = {
+  period: string;
+  cost?: UsageCostSummary;
+};
+
 export type AiKitHeadersResolver =
   | HeadersInit
   | (() => HeadersInit | Promise<HeadersInit>)
@@ -193,7 +203,13 @@ export type ConversationsDeleteResult = {
 
 export type UsageSummaryResult = {
   period: string;
-  cost?: { totalUsd?: number };
+  cost?: UsageCostSummary;
+  periods?: {
+    cumulative?: UsagePeriodSummary;
+    monthly?: UsagePeriodSummary;
+    weekly?: UsagePeriodSummary;
+    daily?: UsagePeriodSummary;
+  };
   tokens?: unknown;
   requests?: unknown;
 };

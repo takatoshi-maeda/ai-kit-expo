@@ -18,4 +18,4 @@ export type {
 export { useMcpStatus } from './useMcpStatus';
 export { useSessions } from './useSessions';
 export { useUsage } from './useUsage';
-export type { AiKitUsageLogEntry, AiKitUsageStatus } from './useUsage';
+export type { AiKitUsageLogEntry, AiKitUsageStatus, AiKitUsageSummary } from './useUsage';

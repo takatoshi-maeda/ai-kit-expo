@@ -30,7 +30,7 @@ export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
   documentFileGet: 'documents.file.get',
   documentFileSave: 'documents.file.save',
   documentWatch: 'documents.watch',
-  usageGet: 'usage.get',
+  usageGet: 'usage.summary',
   healthGet: 'health.get',
 };
 
