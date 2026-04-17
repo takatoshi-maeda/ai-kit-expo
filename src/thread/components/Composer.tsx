@@ -425,8 +425,12 @@ export function Composer({
     if (!activeSuggestion) {
       return;
     }
-    if (activeSuggestion.kind === 'skill' && item.agentRuntime) {
-      runtimeControls?.onChange(item.agentRuntime);
+    if (activeSuggestion.kind === 'skill') {
+      const skillItem = item as ThreadSkillMentionCandidate;
+      skillMentions?.onSelect?.(skillItem);
+      if (skillItem.agentRuntime) {
+        runtimeControls?.onChange(skillItem.agentRuntime);
+      }
     }
     const next =
       activeSuggestion.kind === 'skill'
@@ -442,7 +446,7 @@ export function Composer({
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
-  }, [activeSuggestion, text]);
+  }, [activeSuggestion, runtimeControls, skillMentions, text]);
 
   const handleSelectionChange = useCallback(
     (event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) => {

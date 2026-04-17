@@ -83,6 +83,7 @@ export type ComposerProps = {
   };
   skillMentions?: {
     search: (query: string) => Promise<ThreadSkillMentionCandidate[]>;
+    onSelect?: (item: ThreadSkillMentionCandidate) => void;
   };
 };
 
@@ -125,6 +126,7 @@ export type ThreadPaneProps = {
   };
   skillMentions?: {
     search: (query: string) => Promise<ThreadSkillMentionCandidate[]>;
+    onSelect?: (item: ThreadSkillMentionCandidate) => void;
   };
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
