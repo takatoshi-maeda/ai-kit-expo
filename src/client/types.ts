@@ -20,6 +20,7 @@ export type AiKitThemeTokens = {
 export type AiKitToolNameConfig = {
   agentList: string;
   agentRun: string;
+  agentCancel: string;
   skillList: string;
   conversationList: string;
   conversationGet: string;
@@ -238,6 +239,21 @@ export type AgentRunResult = {
   errorMessage?: string;
 };
 
+export type CancelAgentRunOptions = {
+  sessionId: string;
+  runId: string;
+  agentId?: string;
+  reason?: string;
+  agentName?: string | null;
+};
+
+export type CancelAgentRunResult = {
+  status: 'cancelled' | 'not_running';
+  sessionId: string;
+  runId: string;
+  agentId?: string | null;
+};
+
 export type AgentStreamPayload = {
   type: string;
   [key: string]: unknown;
@@ -370,4 +386,5 @@ export type AiKitClient = {
   getUsageSummary(period?: string, agentName?: string): Promise<UsageSummaryResult>;
   healthCheck(agentName?: string): Promise<HealthCheckResult>;
   runAgent(options: RunAgentOptions): Promise<AgentRunResult>;
+  cancelAgentRun(options: CancelAgentRunOptions): Promise<CancelAgentRunResult>;
 };

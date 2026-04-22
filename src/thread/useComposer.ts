@@ -192,10 +192,10 @@ function validateRuntime(runtime: AgentRuntimeInput | null, policy: AgentRuntime
 }
 
 function selectRuntimePolicy(args: {
-  agents: Array<{
+  agents: {
     agentId: string;
     runtimePolicy?: AgentRuntimePolicy | null;
-  }>;
+  }[];
   defaultAgentId: string | null;
   resolvedAgentName: string;
   threadAgentName: string | null;
@@ -239,6 +239,23 @@ export function useComposer(
   const [runtimeSelectionError, setRuntimeSelectionError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const abortRequestedRef = useRef(false);
+  const cancelRequestSentRef = useRef(false);
+  const cancelUiAppliedRef = useRef(false);
+  const activeRunRef = useRef<{
+    sessionId: string | null;
+    runId: string | null;
+    agentId: string | null;
+    storeKey: string | null;
+    agentEntryId: string | null;
+    ctx: ReturnType<typeof createAgentRunContext> | null;
+  }>({
+    sessionId: sessionId === 'new' ? null : sessionId,
+    runId: null,
+    agentId: null,
+    storeKey: null,
+    agentEntryId: null,
+    ctx: null,
+  });
   const sessionIdRef = useRef(sessionId);
   const runtimeSourceSessionRef = useRef<string | null>(null);
   const runtimeSourceAgentRef = useRef<string | null>(null);
@@ -333,10 +350,49 @@ export function useComposer(
     [options.createSystemMessage, thread],
   );
 
+  const applyCancelledUiState = useCallback(() => {
+    if (cancelUiAppliedRef.current) return;
+    const activeRun = activeRunRef.current;
+    if (!activeRun.storeKey || !activeRun.agentEntryId || !activeRun.ctx) return;
+    cancelUiAppliedRef.current = true;
+    updateActiveRunAgentEntry(activeRun.storeKey, activeRun.agentEntryId, (entry) =>
+      finalizeAgentEntry(activeRun.ctx!, entry, null, true),
+    );
+    const snapshot = getActiveRun(activeRun.storeKey);
+    if (snapshot) {
+      thread.replaceEntries(snapshot.logEntries);
+    }
+    setIsSubmitting(false);
+    thread.setRunning(false, null);
+    completeActiveRun(activeRun.storeKey);
+  }, [thread]);
+
+  const requestRunCancellation = useCallback(async () => {
+    if (cancelRequestSentRef.current) return;
+    const activeRun = activeRunRef.current;
+    if (!activeRun.sessionId || !activeRun.runId) return;
+    cancelRequestSentRef.current = true;
+    try {
+      const result = await client.cancelAgentRun({
+        sessionId: activeRun.sessionId,
+        runId: activeRun.runId,
+        agentId: activeRun.agentId ?? undefined,
+        reason: 'user stopped generation',
+        agentName: resolvedAgentName,
+      });
+      if (result.status === 'cancelled' || result.status === 'not_running') {
+        applyCancelledUiState();
+      }
+      abortControllerRef.current?.abort();
+    } catch {
+      cancelRequestSentRef.current = false;
+    }
+  }, [applyCancelledUiState, client, resolvedAgentName]);
+
   const abort = useCallback(() => {
     abortRequestedRef.current = true;
-    abortControllerRef.current?.abort();
-  }, []);
+    void requestRunCancellation();
+  }, [requestRunCancellation]);
 
   const submitToAgent = useCallback(
     async (text: string, attachments: ComposerImageAttachment[]) => {
@@ -387,6 +443,16 @@ export function useComposer(
       const controller = new AbortController();
       abortControllerRef.current = controller;
       abortRequestedRef.current = false;
+      cancelRequestSentRef.current = false;
+      cancelUiAppliedRef.current = false;
+      activeRunRef.current = {
+        sessionId: activeSessionId === 'new' ? null : activeSessionId,
+        runId: null,
+        agentId: null,
+        storeKey,
+        agentEntryId,
+        ctx: null,
+      };
 
       const ctx = createAgentRunContext({
         controller,
@@ -395,6 +461,7 @@ export function useComposer(
         sessionId: activeSessionId === 'new' ? null : activeSessionId,
         userEntry,
       });
+      activeRunRef.current.ctx = ctx;
 
       const syncReactFromStore = () => {
         const snapshot = getActiveRun(activeRunKey.current);
@@ -434,11 +501,22 @@ export function useComposer(
             }
 
             if (event.kind === 'changeStateStarted' && event.sessionId) {
+              activeRunRef.current = {
+                sessionId: event.sessionId,
+                runId: event.runId ?? activeRunRef.current.runId,
+                agentId: event.agentName ?? event.agentId ?? activeRunRef.current.agentId,
+                storeKey: event.sessionId,
+                agentEntryId: activeRunRef.current.agentEntryId,
+                ctx: activeRunRef.current.ctx,
+              };
               rekeyActiveRun(activeRunKey.current, event.sessionId);
               activeRunKey.current = event.sessionId;
               if (sessionIdRef.current !== event.sessionId) {
                 sessionIdRef.current = event.sessionId;
                 options.onSessionIdChange?.(event.sessionId);
+              }
+              if (abortRequestedRef.current) {
+                void requestRunCancellation();
               }
             }
 
@@ -451,6 +529,14 @@ export function useComposer(
           sessionIdRef.current = result.sessionId;
           options.onSessionIdChange?.(result.sessionId);
         }
+        activeRunRef.current = {
+          sessionId: result.sessionId ?? activeRunRef.current.sessionId,
+          runId: result.runId ?? activeRunRef.current.runId,
+          agentId: activeRunRef.current.agentId,
+          storeKey: activeRunRef.current.storeKey,
+          agentEntryId: activeRunRef.current.agentEntryId,
+          ctx: activeRunRef.current.ctx,
+        };
 
         if (result.responseId || result.message) {
           updateActiveRunAgentEntry(activeRunKey.current, agentEntryId, (entry) => ({
@@ -506,6 +592,16 @@ export function useComposer(
       } finally {
         abortControllerRef.current = null;
         abortRequestedRef.current = false;
+        cancelRequestSentRef.current = false;
+        cancelUiAppliedRef.current = false;
+        activeRunRef.current = {
+          sessionId: null,
+          runId: null,
+          agentId: null,
+          storeKey: null,
+          agentEntryId: null,
+          ctx: null,
+        };
         thread.setRunning(false, null);
         completeActiveRun(activeRunKey.current);
         setTimeout(() => {
@@ -513,7 +609,7 @@ export function useComposer(
         }, 0);
       }
     },
-    [client, options, resolvedAgentName, runtime, runtimeEnabled, thread],
+    [client, options, requestRunCancellation, resolvedAgentName, runtime, runtimeEnabled, runtimePolicy, thread],
   );
 
   const submit = useCallback(

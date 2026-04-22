@@ -1,4 +1,5 @@
 export { listAgents } from './agents';
+export { cancelAgentRun } from './agentCancel';
 export { createAiKitClient, createAiKitDocumentClient, DEFAULT_TOOL_NAMES } from './factory';
 export { deleteConversation, getConversation, listConversations } from './conversations';
 export {
@@ -25,6 +26,8 @@ export type {
   AgentRuntimePolicy,
   AgentStreamPayload,
   AgentsListResult,
+  CancelAgentRunOptions,
+  CancelAgentRunResult,
   SkillListItem,
   SkillsListResult,
   AiKitFetch,

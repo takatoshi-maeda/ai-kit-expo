@@ -1,5 +1,6 @@
 import { listAgents } from './agents';
 import { runAgent } from './agent';
+import { cancelAgentRun } from './agentCancel';
 import { deleteConversation, getConversation, listConversations } from './conversations';
 import {
   getDocumentAssetUrl,
@@ -22,6 +23,7 @@ import { getUsageSummary } from './usage';
 export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
   agentList: 'agent.list',
   agentRun: 'agent.run',
+  agentCancel: 'agent.cancel',
   skillList: 'skills.list',
   conversationList: 'conversations.list',
   conversationGet: 'conversations.get',
@@ -126,6 +128,9 @@ export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
     },
     runAgent(options) {
       return runAgent(client, options);
+    },
+    cancelAgentRun(options) {
+      return cancelAgentRun(client, options);
     },
   };
 
