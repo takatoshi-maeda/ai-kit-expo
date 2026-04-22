@@ -54,6 +54,7 @@ export type ThreadMessageViewProps = {
   colors?: ThreadUiColors;
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>;
 };
 
 export type ThreadDetailProps = {
@@ -62,6 +63,7 @@ export type ThreadDetailProps = {
   colors?: ThreadUiColors;
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>;
 };
 
 export type ComposerProps = {
@@ -138,6 +140,7 @@ export type ThreadPaneProps = {
   };
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>;
   onCopyAll?: () => void | Promise<void>;
   showCopyButton?: boolean;
   showHistoryButton?: boolean;

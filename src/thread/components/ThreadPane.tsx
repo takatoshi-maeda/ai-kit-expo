@@ -28,6 +28,7 @@ export function ThreadPane({
   skillMentions,
   onCopyMessage,
   onOpenArtifactPath,
+  onPressMessageLink,
   onCopyAll,
   showCopyButton = true,
   showHistoryButton = false,
@@ -252,6 +253,7 @@ export function ThreadPane({
         colors={palette}
         onCopyMessage={onCopyMessage}
         onOpenArtifactPath={onOpenArtifactPath}
+        onPressMessageLink={onPressMessageLink}
       />
       <Composer
         onSubmit={onSubmit}

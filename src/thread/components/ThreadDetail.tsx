@@ -11,6 +11,7 @@ export function ThreadDetail({
   colors,
   onCopyMessage,
   onOpenArtifactPath,
+  onPressMessageLink,
 }: ThreadDetailProps): ReactElement {
   const listRef = useRef<FlatList<ThreadMessage>>(null);
 
@@ -33,6 +34,7 @@ export function ThreadDetail({
             colors={colors}
             onCopyMessage={onCopyMessage}
             onOpenArtifactPath={onOpenArtifactPath}
+            onPressMessageLink={onPressMessageLink}
           />
         )}
         contentContainerStyle={styles.content}

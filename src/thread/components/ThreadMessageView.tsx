@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { AgentResponseLogEntry, AgentTimelineItem } from '../types';
@@ -10,6 +10,52 @@ import type { ThreadMessageViewProps } from './types';
 const INITIAL_VISIBLE_TIMELINE = 3;
 const ARTIFACT_PREVIEW_HEAD_LINES = 8;
 const ARTIFACT_PREVIEW_TAIL_LINES = 4;
+const webWrapTextStyle =
+  Platform.OS === 'web'
+    ? ({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } as const)
+    : null;
+const markdownLinkPattern = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+
+function renderLinkedText(
+  text: string,
+  linkColor: string,
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>,
+): ReactNode[] {
+  if (!onPressMessageLink || !text.includes('](')) {
+    return [text];
+  }
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  markdownLinkPattern.lastIndex = 0;
+
+  while ((match = markdownLinkPattern.exec(text)) !== null) {
+    const [raw, label, target] = match;
+    const start = match.index;
+    if (start > cursor) {
+      parts.push(text.slice(cursor, start));
+    }
+    parts.push(
+      <Text
+        key={`link-${start}-${target}`}
+        style={[styles.linkText, { color: linkColor }, webWrapTextStyle]}
+        onPress={() => void onPressMessageLink(target, label)}
+      >
+        {label}
+      </Text>,
+    );
+    cursor = start + raw.length;
+  }
+
+  if (parts.length === 0) {
+    return [text];
+  }
+  if (cursor < text.length) {
+    parts.push(text.slice(cursor));
+  }
+  return parts;
+}
 
 function jsonArgsToYaml(lines: string[]): string[] {
   const joined = lines.join('');
@@ -166,11 +212,13 @@ function InlineTimelineItem({
   colors,
   onCopyMessage,
   onOpenArtifactPath,
+  onPressMessageLink,
 }: {
   item: AgentTimelineItem;
   colors: ReturnType<typeof resolveColors>;
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>;
 }): ReactElement | null {
   const [artifactExpanded, setArtifactExpanded] = useState(false);
   const [artifactPathHovered, setArtifactPathHovered] = useState(false);
@@ -194,11 +242,11 @@ function InlineTimelineItem({
             {yamlLines.map((line, index) => (
               <Text
                 key={`${item.id}-${index}`}
-                style={[timelineStyles.argLine, { color: colors.timelineArg }]}
+                style={[timelineStyles.argLine, { color: colors.timelineArg }, webWrapTextStyle]}
                 numberOfLines={2}
               >
                 {index === 0 ? '\u2514 ' : '  '}
-                {line}
+                {renderLinkedText(line, colors.tint, onPressMessageLink)}
               </Text>
             ))}
           </View>
@@ -420,7 +468,9 @@ function InlineTimelineItem({
     return (
       <View style={timelineStyles.responseBlock}>
         <View style={[timelineStyles.dot, { backgroundColor: colors.timelineDotBlue, marginTop: 6 }]} />
-        <Text style={[timelineStyles.responseText, { color: colors.timelineLabel }]}>{item.text.trim()}</Text>
+        <Text style={[timelineStyles.responseText, { color: colors.timelineLabel }, webWrapTextStyle]}>
+          {renderLinkedText(item.text.trim(), colors.tint, onPressMessageLink)}
+        </Text>
       </View>
     );
   }
@@ -434,12 +484,14 @@ function AgentInlineTimeline({
   colors,
   onCopyMessage,
   onOpenArtifactPath,
+  onPressMessageLink,
 }: {
   entry: AgentResponseLogEntry;
   liveElapsed: number;
   colors: ReturnType<typeof resolveColors>;
   onCopyMessage?: (text: string) => void | Promise<void>;
   onOpenArtifactPath?: (path: string) => void | Promise<void>;
+  onPressMessageLink?: (target: string, label: string) => void | Promise<void>;
 }): ReactElement | null {
   const [expanded, setExpanded] = useState(false);
   const timeline = entry.timeline;
@@ -492,6 +544,7 @@ function AgentInlineTimeline({
           colors={colors}
           onCopyMessage={onCopyMessage}
           onOpenArtifactPath={onOpenArtifactPath}
+          onPressMessageLink={onPressMessageLink}
         />
       ))}
       {showSyntheticThinking ? (
@@ -505,8 +558,8 @@ function AgentInlineTimeline({
       {!hasTimelineText && entry.responseText?.trim() ? (
         <View style={timelineStyles.responseBlock}>
           <View style={[timelineStyles.dot, { backgroundColor: colors.timelineDotBlue, marginTop: 6 }]} />
-          <Text style={[timelineStyles.responseText, { color: colors.timelineLabel }]}>
-            {entry.responseText.trim()}
+          <Text style={[timelineStyles.responseText, { color: colors.timelineLabel }, webWrapTextStyle]}>
+            {renderLinkedText(entry.responseText.trim(), colors.tint, onPressMessageLink)}
           </Text>
         </View>
       ) : null}
@@ -527,6 +580,7 @@ export function ThreadMessageView({
   colors: colorOverrides,
   onCopyMessage,
   onOpenArtifactPath,
+  onPressMessageLink,
 }: ThreadMessageViewProps): ReactElement {
   const colors = resolveColors(colorOverrides);
   const [collapsed, setCollapsed] = useState(false);
@@ -545,7 +599,9 @@ export function ThreadMessageView({
   if (message.role === 'system') {
     return (
       <View style={styles.systemContainer}>
-        <Text style={[styles.systemText, { color: colors.systemText }]}>{message.content}</Text>
+        <Text style={[styles.systemText, { color: colors.systemText }, webWrapTextStyle]}>
+          {renderLinkedText(message.content, colors.tint, onPressMessageLink)}
+        </Text>
       </View>
     );
   }
@@ -574,6 +630,7 @@ export function ThreadMessageView({
                 colors={colors}
                 onCopyMessage={onCopyMessage}
                 onOpenArtifactPath={onOpenArtifactPath}
+                onPressMessageLink={onPressMessageLink}
               />
             ) : Array.isArray(message.contentParts) && message.contentParts.length > 0 ? (
               <View style={styles.imageGroup}>
@@ -584,17 +641,23 @@ export function ThreadMessageView({
                     </Pressable>
                   ) : (
                     <Pressable key={`${message.id}-part-${index}`} onLongPress={handleCopy}>
-                      <Text style={[styles.content, { color: colors.text }]}>{part.text}</Text>
+                      <Text style={[styles.content, { color: colors.text }, webWrapTextStyle]}>
+                        {renderLinkedText(part.text, colors.tint, onPressMessageLink)}
+                      </Text>
                     </Pressable>
                   ),
                 )}
               </View>
             ) : message.content ? (
               <Pressable onLongPress={handleCopy}>
-                <Text style={[styles.content, { color: colors.text }]}>{message.content}</Text>
+                <Text style={[styles.content, { color: colors.text }, webWrapTextStyle]}>
+                  {renderLinkedText(message.content, colors.tint, onPressMessageLink)}
+                </Text>
               </Pressable>
             ) : message.statusLine ? (
-              <Text style={[styles.statusLine, { color: colors.icon }]}>{message.statusLine}</Text>
+              <Text style={[styles.statusLine, { color: colors.icon }, webWrapTextStyle]}>
+                {renderLinkedText(message.statusLine, colors.tint, onPressMessageLink)}
+              </Text>
             ) : null}
             {!isUser && message.content && !hasTimeline && onCopyMessage ? (
               <Pressable onPress={handleCopy} style={styles.copyButton}>
@@ -700,6 +763,9 @@ const styles = StyleSheet.create({
   statusLine: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  linkText: {
+    textDecorationLine: 'underline',
   },
   copyButton: {
     marginTop: 6,
