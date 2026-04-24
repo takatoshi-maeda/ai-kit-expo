@@ -1,5 +1,11 @@
 import { callTool } from './jsonrpc';
-import type { AiKitClient, ConversationsDeleteResult, ConversationsGetResult, ConversationsListResult } from './types';
+import type {
+  AiKitClient,
+  ConversationsDeleteResult,
+  ConversationsForkResult,
+  ConversationsGetResult,
+  ConversationsListResult,
+} from './types';
 
 export function listConversations(
   client: AiKitClient,
@@ -38,6 +44,24 @@ export function deleteConversation(
     client,
     client.config.toolNames?.conversationDelete ?? 'conversations.delete',
     { sessionId },
+    {},
+    agentName,
+  );
+}
+
+export function forkConversation(
+  client: AiKitClient,
+  args: {
+    sessionId: string;
+    checkpointTurnIndex: number;
+    agentId?: string;
+  },
+  agentName?: string,
+): Promise<ConversationsForkResult> {
+  return callTool<ConversationsForkResult>(
+    client,
+    client.config.toolNames?.conversationFork ?? 'conversations.fork',
+    args,
     {},
     agentName,
   );

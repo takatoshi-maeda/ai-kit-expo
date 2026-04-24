@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,6 +23,7 @@ export function ThreadPane({
   placeholder,
   allowImageAttachments,
   composerAccessory,
+  draftRestore,
   runtimeControls,
   pathMentions,
   skillMentions,
@@ -46,6 +47,8 @@ export function ThreadPane({
   const palette = resolveColors(colors);
   const [isNavigationOpen, setIsNavigationOpen] = useState(false);
   const [isUsageOpen, setIsUsageOpen] = useState(false);
+  const checkpointEscapeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkpointEscapeArmedAtRef = useRef<number | null>(null);
   const usageItems = [
     { key: 'today', label: 'Today', value: usageSummary?.dailyUsd },
     { key: 'week', label: 'Week', value: usageSummary?.weeklyUsd },
@@ -71,6 +74,105 @@ export function ThreadPane({
       setIsUsageOpen(false);
     }
   }, [isHistoryOpen, isNavigationOpen, usageItems.length]);
+
+  const clearCheckpointEscapeArm = useCallback(() => {
+    checkpointEscapeArmedAtRef.current = null;
+    if (checkpointEscapeTimerRef.current) {
+      clearTimeout(checkpointEscapeTimerRef.current);
+      checkpointEscapeTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearCheckpointEscapeArm, [clearCheckpointEscapeArm]);
+
+  const handleComposerKeyDown = useCallback(
+    (event: {
+      key?: string;
+      preventDefault: () => void;
+    }) => {
+      const key = event.key;
+
+      if (checkpoint?.visible) {
+        clearCheckpointEscapeArm();
+        if (key === 'ArrowDown') {
+          event.preventDefault();
+          checkpoint.onMoveSelection?.(1);
+          return true;
+        }
+        if (key === 'ArrowUp') {
+          event.preventDefault();
+          checkpoint.onMoveSelection?.(-1);
+          return true;
+        }
+        if (key === 'Enter') {
+          event.preventDefault();
+          checkpoint.onApply();
+          return true;
+        }
+        if (key === 'Escape') {
+          event.preventDefault();
+          checkpoint.onCancel();
+          return true;
+        }
+        return false;
+      }
+
+      const shortcutsEnabled = checkpoint?.keyboardShortcuts?.enabled === true;
+      if (!shortcutsEnabled || !checkpoint?.onOpen || isSubmitting) {
+        if (key && key !== 'Escape') {
+          clearCheckpointEscapeArm();
+        }
+        return false;
+      }
+
+      if (key !== 'Escape') {
+        clearCheckpointEscapeArm();
+        return false;
+      }
+
+      event.preventDefault();
+      const windowMs = checkpoint.keyboardShortcuts?.doubleEscapeWindowMs ?? 600;
+      const now = performance.now();
+      const armedAt = checkpointEscapeArmedAtRef.current;
+
+      if (armedAt != null && now - armedAt <= windowMs) {
+        clearCheckpointEscapeArm();
+        checkpoint.onOpen();
+        return true;
+      }
+
+      clearCheckpointEscapeArm();
+      checkpointEscapeArmedAtRef.current = now;
+      checkpointEscapeTimerRef.current = setTimeout(() => {
+        checkpointEscapeArmedAtRef.current = null;
+        checkpointEscapeTimerRef.current = null;
+      }, windowMs);
+      return true;
+    },
+    [checkpoint, clearCheckpointEscapeArm, isSubmitting],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !checkpoint?.visible) {
+      return;
+    }
+
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+      handleComposerKeyDown({
+        key: event.key,
+        preventDefault: () => {
+          event.preventDefault();
+          event.stopPropagation();
+        },
+      });
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown, true);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
+  }, [checkpoint?.visible, handleComposerKeyDown]);
 
   return (
     <View style={styles.container}>
@@ -256,14 +358,20 @@ export function ThreadPane({
         onPressMessageLink={onPressMessageLink}
       />
       <Composer
-        onSubmit={onSubmit}
+        onSubmit={(text, attachments) => {
+          clearCheckpointEscapeArm();
+          onSubmit(text, attachments);
+        }}
         onAbort={onAbort}
         isSubmitting={isSubmitting}
         onFocus={onComposerFocus}
+        onBlur={clearCheckpointEscapeArm}
         colors={palette}
         placeholder={placeholder}
         allowImageAttachments={allowImageAttachments}
         composerAccessory={composerAccessory}
+        draftRestore={draftRestore}
+        onKeyDown={handleComposerKeyDown}
         runtimeControls={runtimeControls}
         pathMentions={pathMentions}
         skillMentions={skillMentions}

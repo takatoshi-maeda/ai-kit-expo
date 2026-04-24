@@ -1,7 +1,7 @@
 import { listAgents } from './agents';
 import { runAgent } from './agent';
 import { cancelAgentRun } from './agentCancel';
-import { deleteConversation, getConversation, listConversations } from './conversations';
+import { deleteConversation, forkConversation, getConversation, listConversations } from './conversations';
 import {
   getDocumentAssetUrl,
   getDocumentFile,
@@ -27,6 +27,7 @@ export const DEFAULT_TOOL_NAMES: AiKitToolNameConfig = {
   skillList: 'skills.list',
   conversationList: 'conversations.list',
   conversationGet: 'conversations.get',
+  conversationFork: 'conversations.fork',
   conversationDelete: 'conversations.delete',
   documentTree: 'documents.tree',
   documentFileGet: 'documents.file.get',
@@ -116,6 +117,9 @@ export function createAiKitClient(config: AiKitClientConfig): AiKitClient {
     },
     getConversation(sessionId, agentName) {
       return getConversation(client, sessionId, agentName);
+    },
+    forkConversation(args, agentName) {
+      return forkConversation(client, args, agentName);
     },
     deleteConversation(sessionId, agentName) {
       return deleteConversation(client, sessionId, agentName);

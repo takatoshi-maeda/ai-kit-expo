@@ -2,6 +2,7 @@ export {
   createAiKitClient,
   createAiKitDocumentClient,
   DEFAULT_TOOL_NAMES,
+  forkConversation,
   listAgents,
 } from './client';
 export type {
@@ -15,6 +16,7 @@ export type {
   AgentsListResult,
   SkillListItem,
   SkillsListResult,
+  ConversationsForkResult,
   AiKitFetch,
   AiKitHeadersResolver,
   AiKitInjectedDependencies,

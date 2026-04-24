@@ -71,10 +71,21 @@ export type ComposerProps = {
   onAbort: () => void;
   isSubmitting: boolean;
   onFocus?: () => void;
+  onBlur?: () => void;
   colors?: ThreadUiColors;
   placeholder?: string;
   allowImageAttachments?: boolean;
   composerAccessory?: ReactNode;
+  draftRestore?: {
+    value: string;
+    revision: number;
+  };
+  onKeyDown?: (event: {
+    key?: string;
+    shiftKey?: boolean;
+    isComposing?: boolean;
+    preventDefault: () => void;
+  }) => boolean | void;
   runtimeControls?: {
     value: AgentRuntimeInput | null;
     policy: AgentRuntimePolicy | null;
@@ -125,6 +136,10 @@ export type ThreadPaneProps = {
   placeholder?: string;
   allowImageAttachments?: boolean;
   composerAccessory?: ReactNode;
+  draftRestore?: {
+    value: string;
+    revision: number;
+  };
   runtimeControls?: {
     value: AgentRuntimeInput | null;
     policy: AgentRuntimePolicy | null;
@@ -157,9 +172,15 @@ export type ThreadPaneProps = {
     visible: boolean;
     candidates: ThreadCheckpointCandidate[];
     selectionIndex: number;
+    onOpen?: () => void;
+    onMoveSelection?: (delta: number) => void;
     onSelect: (index: number) => void;
     onApply: () => void;
     onCancel: () => void;
     formatTimestamp?: (isoString: string) => string;
+    keyboardShortcuts?: {
+      enabled?: boolean;
+      doubleEscapeWindowMs?: number;
+    };
   };
 };

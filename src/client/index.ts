@@ -1,7 +1,7 @@
 export { listAgents } from './agents';
 export { cancelAgentRun } from './agentCancel';
 export { createAiKitClient, createAiKitDocumentClient, DEFAULT_TOOL_NAMES } from './factory';
-export { deleteConversation, getConversation, listConversations } from './conversations';
+export { deleteConversation, forkConversation, getConversation, listConversations } from './conversations';
 export {
   getDocumentAssetUrl,
   getDocumentFile,
@@ -44,6 +44,7 @@ export type {
   DocumentWatchEvent,
   ConversationSummary,
   ConversationsDeleteResult,
+  ConversationsForkResult,
   ConversationsGetResult,
   ConversationsListResult,
   HealthCheckResult,

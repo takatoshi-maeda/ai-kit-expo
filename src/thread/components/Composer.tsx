@@ -154,10 +154,13 @@ export function Composer({
   onAbort,
   isSubmitting,
   onFocus,
+  onBlur,
   colors: colorOverrides,
   placeholder = 'メッセージを入力...',
   allowImageAttachments = true,
   composerAccessory,
+  draftRestore,
+  onKeyDown,
   runtimeControls,
   pathMentions,
   skillMentions,
@@ -183,6 +186,7 @@ export function Composer({
   const isPointerSelectingMentionRef = useRef(false);
   const skipNextSubmitKeyRef = useRef(false);
   const lastHandledKeyRef = useRef<{ key: string; at: number } | null>(null);
+  const lastDraftRestoreRevisionRef = useRef<number | null>(null);
   const mentionSearchSequenceRef = useRef(0);
   const mentionItemLayoutsRef = useRef<Record<number, { y: number; height: number }>>({});
   const mentionViewportHeightRef = useRef(0);
@@ -315,6 +319,30 @@ export function Composer({
     };
     input.click();
   }, [allowImageAttachments, appendFiles, isSubmitting]);
+
+  useEffect(() => {
+    if (!draftRestore) {
+      return;
+    }
+    if (lastDraftRestoreRevisionRef.current === draftRestore.revision) {
+      return;
+    }
+    lastDraftRestoreRevisionRef.current = draftRestore.revision;
+
+    const nextText = draftRestore.value;
+    const nextSelection = { start: nextText.length, end: nextText.length };
+    setText(nextText);
+    setAttachments([]);
+    setSelection(nextSelection);
+    setControlledSelection(nextSelection);
+    setMentionItems([]);
+    setMentionSelectionIndex(0);
+    setIsMentionLoading(false);
+    setDismissedMentionTokenKey(null);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  }, [draftRestore]);
 
   useEffect(() => {
     if (!activeMentionTokenKey) {
@@ -466,8 +494,21 @@ export function Composer({
 
   const handleComposerKeyEvent = useCallback((event: ComposerKeyEvent) => {
     if (Platform.OS !== 'web') return;
-    const { key, shiftKey, isComposing, preventDefault } = getComposerKeyEventMeta(event);
+    const meta = getComposerKeyEventMeta(event);
+    const { key, shiftKey, isComposing, preventDefault } = meta;
     if (isComposing) return;
+    const now = performance.now();
+    if (
+      key
+      && lastHandledKeyRef.current
+      && lastHandledKeyRef.current.key === key
+      && now - lastHandledKeyRef.current.at < 32
+    ) {
+      return;
+    }
+    if (key) {
+      lastHandledKeyRef.current = { key, at: now };
+    }
 
     if (isMentionListVisible && key === 'Escape') {
       skipNextSubmitKeyRef.current = true;
@@ -497,6 +538,10 @@ export function Composer({
       }
     }
 
+    if (onKeyDown?.(meta)) {
+      return;
+    }
+
     if (key === 'Enter' && !shiftKey) {
       if (skipNextSubmitKeyRef.current) {
         skipNextSubmitKeyRef.current = false;
@@ -513,10 +558,14 @@ export function Composer({
     isMentionListVisible,
     mentionItems,
     mentionSelectionIndex,
+    onKeyDown,
   ]);
 
   const handleKeyPress = useCallback((event: ComposerKeyEvent) => {
     if (Platform.OS !== 'web') {
+      return;
+    }
+    if (isMentionListVisible || onKeyDown) {
       return;
     }
     const { key } = getComposerKeyEventMeta(event);
@@ -524,14 +573,14 @@ export function Composer({
       return;
     }
     handleComposerKeyEvent(event);
-  }, [handleComposerKeyEvent, isMentionListVisible]);
+  }, [handleComposerKeyEvent, isMentionListVisible, onKeyDown]);
 
   useEffect(() => {
     if (
       Platform.OS !== 'web'
       || typeof window === 'undefined'
       || !isFocused
-      || !isMentionListVisible
+      || (!isMentionListVisible && !onKeyDown)
     ) {
       return;
     }
@@ -540,21 +589,12 @@ export function Composer({
       if (!isFocusedRef.current || event.defaultPrevented) {
         return;
       }
-      const now = performance.now();
-      if (
-        lastHandledKeyRef.current
-        && lastHandledKeyRef.current.key === event.key
-        && now - lastHandledKeyRef.current.at < 32
-      ) {
-        return;
-      }
-      lastHandledKeyRef.current = { key: event.key, at: now };
       handleComposerKeyEvent(event as unknown as ComposerWebKeyEvent);
     };
 
     window.addEventListener('keydown', handleWindowKeyDown, true);
     return () => window.removeEventListener('keydown', handleWindowKeyDown, true);
-  }, [handleComposerKeyEvent, isFocused, isMentionListVisible]);
+  }, [handleComposerKeyEvent, isFocused, isMentionListVisible, onKeyDown]);
 
   useEffect(() => {
     if (!isMentionListVisible) {
@@ -737,6 +777,7 @@ export function Composer({
                   return;
                 }
                 setIsFocused(false);
+                onBlur?.();
               }}
               placeholder={placeholder}
               placeholderTextColor={`${colors.icon}99`}

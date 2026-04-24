@@ -24,6 +24,7 @@ export type AiKitToolNameConfig = {
   skillList: string;
   conversationList: string;
   conversationGet: string;
+  conversationFork: string;
   conversationDelete: string;
   documentTree: string;
   documentFileGet: string;
@@ -200,6 +201,11 @@ export type ConversationsGetResult = {
 
 export type ConversationsDeleteResult = {
   deleted: boolean;
+};
+
+export type ConversationsForkResult = {
+  sessionId: string;
+  copiedTurnCount: number;
 };
 
 export type UsageSummaryResult = {
@@ -382,6 +388,14 @@ export type AiKitClient = {
   ): Promise<SkillsListResult>;
   listConversations(limit?: number, agentName?: string): Promise<ConversationsListResult>;
   getConversation(sessionId: string, agentName?: string): Promise<ConversationsGetResult>;
+  forkConversation(
+    args: {
+      sessionId: string;
+      checkpointTurnIndex: number;
+      agentId?: string;
+    },
+    agentName?: string,
+  ): Promise<ConversationsForkResult>;
   deleteConversation(sessionId: string, agentName?: string): Promise<ConversationsDeleteResult>;
   getUsageSummary(period?: string, agentName?: string): Promise<UsageSummaryResult>;
   healthCheck(agentName?: string): Promise<HealthCheckResult>;
