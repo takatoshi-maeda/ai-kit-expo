@@ -12,7 +12,7 @@ const ARTIFACT_PREVIEW_HEAD_LINES = 8;
 const ARTIFACT_PREVIEW_TAIL_LINES = 4;
 const webWrapTextStyle =
   Platform.OS === 'web'
-    ? ({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } as const)
+    ? ({ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' } as any)
     : null;
 const markdownLinkPattern = /\[([^\]]+)\]\(([^)\s]+)\)/g;
 
