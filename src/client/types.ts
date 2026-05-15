@@ -357,6 +357,7 @@ export type RunAgentOptions = {
   message?: string;
   input?: AgentInputItem[];
   sessionId?: string | null;
+  agentId?: string | null;
   agentName?: string | null;
   runtime?: AgentRuntimeInput;
   params?: Record<string, unknown>;

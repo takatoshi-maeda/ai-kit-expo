@@ -215,6 +215,7 @@ export type UseThreadOptions = {
 
 export type UseComposerOptions = {
   agentName?: string;
+  agentId?: string | null;
   resolveParams?: () => Record<string, unknown> | undefined;
   runtime?: {
     enabled?: boolean;

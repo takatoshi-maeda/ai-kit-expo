@@ -198,9 +198,11 @@ function selectRuntimePolicy(args: {
   }[];
   defaultAgentId: string | null;
   resolvedAgentName: string;
+  selectedAgentId?: string | null;
   threadAgentName: string | null;
 }): AgentRuntimePolicy | null {
   const candidates = [
+    args.selectedAgentId,
     args.threadAgentName,
     args.resolvedAgentName,
     args.defaultAgentId,
@@ -293,6 +295,7 @@ export function useComposer(
           agents,
           defaultAgentId: payload.defaultAgentId,
           resolvedAgentName,
+          selectedAgentId: options.agentId,
           threadAgentName: thread.agentName,
         }));
       } catch {
@@ -304,7 +307,7 @@ export function useComposer(
     return () => {
       cancelled = true;
     };
-  }, [client, resolvedAgentName, runtimeEnabled, thread.agentName]);
+  }, [client, options.agentId, resolvedAgentName, runtimeEnabled, thread.agentName]);
 
   useEffect(() => {
     if (!runtimeEnabled) return;
@@ -475,6 +478,7 @@ export function useComposer(
           message: hasAttachments ? undefined : textForAgent,
           input: hasAttachments ? input : undefined,
           sessionId: activeSessionId === 'new' ? undefined : activeSessionId,
+          agentId: options.agentId ?? undefined,
           agentName: resolvedAgentName,
           runtime: runtimeForRequest,
           params,
